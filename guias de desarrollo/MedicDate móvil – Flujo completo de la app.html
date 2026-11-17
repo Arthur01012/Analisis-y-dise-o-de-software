@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedicDate móvil – Flujo completo de la app</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#EEF1F5;color:#1A1A1A;font-family:Roboto,system-ui,sans-serif}
+  header.top{text-align:center;padding:20px 16px 4px}
+  header.top h1{margin:0;font-size:20px;font-family:Montserrat,Roboto,sans-serif}
+  header.top p{margin:6px 0 0;font-size:14px;color:#5B6672}
+  .layout{display:flex;gap:28px;justify-content:center;align-items:flex-start;flex-wrap:wrap;padding:16px}
+
+  /* teléfono */
+  .stage{flex:none}
+  .phone{width:410px;height:864px;background:#111;border-radius:46px;padding:10px;transform-origin:top left;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .glass{position:relative;width:390px;height:844px;border-radius:36px;overflow:hidden;background:#fff}
+  .scr{position:absolute;inset:0}
+  .scr[hidden]{display:none}
+  .scr a{cursor:pointer}
+  .scr button{cursor:pointer}
+
+  /* panel */
+  .panel{width:330px;max-width:100%}
+  .panel h2{font-size:15px;margin:0 0 6px}
+  .panel .hint{font-size:12.5px;color:#5B6672;line-height:1.5;margin:0 0 6px}
+  .panel h3{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#5B6672;margin:16px 0 6px}
+  .item{display:block;width:100%;text-align:left;background:#fff;border:1px solid #D9DFE6;border-radius:10px;padding:9px 12px;margin-bottom:6px;font:inherit;font-size:13.5px;color:#1A1A1A;cursor:pointer}
+  .item:hover{border-color:#0B5FA5}
+  .item.on{background:#0B5FA5;border-color:#0B5FA5;color:#fff;font-weight:700}
+  .week-controls{display:flex;align-items:center;justify-content:center;gap:8px}
+  .week-controls button{width:30px;height:30px;border:1px solid #D5DEE8;border-radius:10px;background:#FFFFFF;color:#0B5FA5;font-size:20px;line-height:1;cursor:pointer}
+  .week-controls span{min-width:132px;text-align:center;font-size:12px;font-weight:500;color:#5B6672}
+  .date-options{width:100%;overflow:hidden;touch-action:pan-y}
+  .week-track{display:flex;width:300%;transform:translateX(-33.333333%);transition:transform 240ms ease}
+  .week-page{display:grid;flex:0 0 33.333333%;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+  .week-page button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;height:64px;padding:4px 1px;border:0;border-radius:12px;background:#F4F8FC;color:#1A1A1A;font-family:Roboto,sans-serif;cursor:pointer}
+  .week-page button[aria-pressed="true"]{background:#0B5FA5;color:#FFFFFF}
+  .week-page button[aria-pressed="true"] span:first-child{color:#D9E9F6}
+  .week-page button:disabled{background:#F4F8FC;color:#B1BAC4;cursor:not-allowed}
+  .week-page button:disabled span:first-child{color:#B1BAC4}
+  .week-page button span:first-child{font-size:11px;color:#5B6672}
+  .week-page button span:last-child{font-family:Montserrat,Roboto,sans-serif;font-weight:600;font-size:16px}
+  .acciones{display:flex;gap:8px;margin-top:14px}
+  .acciones button{flex:1;border:1px solid #8B98A7;background:#fff;border-radius:18px;padding:8px;font:inherit;font-size:13px;cursor:pointer}
+  .acciones button:disabled{opacity:.4;cursor:default}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>MedicDate · App móvil completa</h1>
+  <p>Toca botones, tarjetas y la barra inferior para recorrer el flujo, o elige una pantalla de la lista. Las validaciones y reservas se simulan en el navegador; no se envían datos a un servidor.</p>
+</header>
+
+<div class="layout">
+  <div class="stage" id="stage">
+    <div class="phone" id="phone">
+      <div class="glass" id="glass">
+<section class="scr" id="s-Main" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <header style="display: flex; align-items: center; gap: 12px; padding: 40px 24px 0">
+    <svg width="44" height="44" viewBox="0 0 44 44" role="img" aria-label="MedicDate"><rect width="44" height="44" rx="12" fill="#0B5FA5"/><path d="M22 12v20M12 22h20" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/></svg>
+    <span style="font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 20px; color: #0B5FA5">MedicDate</span>
+  </header>
+
+  <main style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 32px; padding: 0 24px">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 32px; line-height: 1.15">Hola de nuevo</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #5B6672">Inicia sesión para reservar y consultar tus citas en el Centro Médico Sagrado Corazón.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="Main-correo" style="font-size: 14px; font-weight: 500">Correo electrónico</label>
+        <input id="Main-correo" type="email" autocomplete="username" required placeholder="nombre@correo.com" style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="Main-clave" style="font-size: 14px; font-weight: 500">Contraseña</label>
+        <input id="Main-clave" type="password" autocomplete="current-password" required placeholder="Tu contraseña" style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF">
+      </div>
+    </div>
+
+    <a href="#" data-action="login" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">Iniciar sesión</a>
+    <a href="#" data-go="MRecuperar" style="align-self: center; min-height: 40px; display: flex; align-items: center; color: #0B5FA5; font-size: 14px; font-weight: 500; text-decoration: none">¿Olvidaste tu contraseña?</a>
+  </main>
+
+  <section aria-label="Crear cuenta" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 24px 28px; font-size: 15px; color: #5B6672">
+    <span>¿Aún no tienes cuenta?</span>
+    <a href="#" data-go="Registro" style="display: flex; align-items: center; min-height: 44px; font-weight: 700; color: #0B5FA5; text-decoration: none">Crear cuenta</a>
+  </section>
+</div></section>
+<section class="scr" id="s-Registro" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 12px 14px 0">
+    <a href="#" data-go="Main" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <main style="flex: 1; display: flex; flex-direction: column; gap: 16px; padding: 0 24px 0">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 28px; line-height: 1.15">Crea tu cuenta</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #5B6672">Solo necesitamos lo básico para reservar tus citas.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="Registro-nombres" style="font-size: 14px; font-weight: 500">Nombre(s)</label>
+        <input id="Registro-nombres" type="text" autocomplete="given-name" required style="height: 48px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="Registro-apellido-paterno" style="font-size: 14px; font-weight: 500">Apellido paterno</label>
+        <input id="Registro-apellido-paterno" type="text" autocomplete="family-name" required style="height: 48px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="Registro-apellido-materno" style="font-size: 14px; font-weight: 500">Apellido materno (opcional)</label>
+        <input id="Registro-apellido-materno" type="text" autocomplete="family-name" style="height: 48px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="Registro-correo" style="font-size: 14px; font-weight: 500">Correo electrónico</label>
+        <input id="Registro-correo" type="email" autocomplete="email" required style="height: 48px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="Registro-telefono" style="font-size: 14px; font-weight: 500">Teléfono</label>
+        <input id="Registro-telefono" type="tel" autocomplete="tel" required style="height: 48px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF">
+        <p style="margin: 0; font-size: 13px; line-height: 1.4; color: #5B6672">Si el centro médico ya te registró, vincularemos tu cuenta con ese registro.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="Registro-clave" style="font-size: 14px; font-weight: 500">Contraseña</label>
+        <input id="Registro-clave" type="password" autocomplete="new-password" minlength="8" pattern="(?=.*[A-Za-z])(?=.*[0-9]).{8,}" required style="height: 48px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF">
+      </div>
+    </div>
+  </main>
+
+  <section aria-label="Crear cuenta" style="display: flex; flex-direction: column; gap: 4px; padding: 12px 24px 16px">
+    <a href="#" data-action="register" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">Crear cuenta</a>
+    <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; color: #5B6672">
+      <span>¿Ya tienes cuenta?</span>
+      <a href="#" data-go="Main" style="display: flex; align-items: center; min-height: 44px; font-weight: 700; color: #0B5FA5; text-decoration: none">Iniciar sesión</a>
+    </div>
+  </section>
+</div></section>
+<section class="scr" id="s-Explorar" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 24px; padding: 24px 24px 0">
+
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <h1 id="explore-greeting" style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 24px; line-height: 1.2">Hola, María</h1>
+      <a href="#" data-go="Notificaciones" aria-label="Notificaciones, hay una sin leer" style="position: relative; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 22px; background: #F4F8FC; color: #1A1A1A">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 17v-6a6 6 0 0112 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg>
+        <span style="position: absolute; top: 9px; right: 10px; width: 8px; height: 8px; border-radius: 4px; background: #0B5FA5; border: 2px solid #F4F8FC"></span>
+      </a>
+    </div>
+
+    <div style="position: relative">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="position: absolute; left: 16px; top: 15px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input type="search" aria-label="Buscar médico o especialidad" placeholder="Buscar médico o especialidad" style="height: 52px; box-sizing: border-box; width: 100%; border: 0; border-radius: 14px; padding: 0 16px 0 48px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #F4F8FC">
+    </div>
+    <p id="search-empty" hidden style="margin: -16px 0 0; font-size: 14px; color: #5B6672">No encontramos médicos ni especialidades con esa búsqueda.</p>
+
+    <a href="#" data-go="Detalle" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-radius: 20px; background: #0B5FA5; color: #FFFFFF; text-decoration: none">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 13px; font-weight: 500; color: #D9E9F6">Tu próxima cita</span>
+        <span data-appointment-field="summary" style="font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 20px; line-height: 1.2">Vie 13 nov · 10:30 · Consultorio 3</span>
+        <span data-appointment-field="doctor" style="font-size: 14px; color: #D9E9F6">Cardiología · Dra. Laura Méndez</span>
+      </div>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    </a>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 16px">Especialidades</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+        <a href="#" data-go="MEspecialidad" data-specialty="Cardiología" data-search-item style="display: flex; align-items: center; height: 56px; padding: 0 16px; border-radius: 14px; background: #F4F8FC; color: #1A1A1A; font-size: 15px; font-weight: 500; text-decoration: none">Cardiología</a>
+        <a href="#" data-go="MEspecialidad" data-specialty="Eco" data-search-item style="display: flex; align-items: center; height: 56px; padding: 0 16px; border-radius: 14px; background: #F4F8FC; color: #1A1A1A; font-size: 15px; font-weight: 500; text-decoration: none">Eco</a>
+        <a href="#" data-go="MEspecialidad" data-specialty="Neurología" data-search-item style="display: flex; align-items: center; height: 56px; padding: 0 16px; border-radius: 14px; background: #F4F8FC; color: #1A1A1A; font-size: 15px; font-weight: 500; text-decoration: none">Neurología</a>
+        <a href="#" data-go="MEspecialidad" data-specialty="Nutrición" data-search-item style="display: flex; align-items: center; height: 56px; padding: 0 16px; border-radius: 14px; background: #F4F8FC; color: #1A1A1A; font-size: 15px; font-weight: 500; text-decoration: none">Nutrición</a>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column">
+      <h2 style="margin: 0 0 8px; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 16px">Médicos disponibles</h2>
+      <a href="#" data-go="Medico" data-doctor="laura" data-search-item style="display: flex; align-items: center; gap: 14px; height: 72px; border-bottom: 1px solid #EDF1F5; color: #1A1A1A; text-decoration: none">
+        <span style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 24px; background: #D9E9F6; color: #0B5FA5; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 16px">LM</span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 16px; font-weight: 500">Dra. Laura Méndez</span>
+          <span style="font-size: 14px; color: #5B6672">Cardiología</span>
+        </span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#" data-go="Medico" data-doctor="ivan" data-search-item style="display: flex; align-items: center; gap: 14px; height: 72px; color: #1A1A1A; text-decoration: none">
+        <span style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 24px; background: #D9E9F6; color: #0B5FA5; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 16px">IR</span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 16px; font-weight: 500">Dr. Iván Robles</span>
+          <span style="font-size: 14px; color: #5B6672">Neurología</span>
+        </span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </main>
+
+  <nav aria-label="Navegación principal" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: 72px; box-sizing: border-box; border-top: 1px solid #E3EAF2; background: #FFFFFF">
+    <a href="#" data-go="Explorar" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #0B5FA5; font-size: 12px; font-weight: 700; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>
+      Explorar
+    </a>
+    <a href="#" data-go="MisCitas" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #5B6672; font-size: 12px; font-weight: 500; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>
+      Citas
+    </a>
+    <a href="#" data-go="Perfil" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #5B6672; font-size: 12px; font-weight: 500; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg>
+      Cuenta
+    </a>
+  </nav>
+</div></section>
+<section class="scr" id="s-Medico" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="Explorar" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 28px; padding: 8px 24px 0">
+
+    <div style="display: flex; align-items: center; gap: 16px">
+      <span id="doctor-initials" style="display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 36px; background: #D9E9F6; color: #0B5FA5; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 24px">LM</span>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 id="doctor-name" style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 22px; line-height: 1.2">Dra. Laura Méndez</h1>
+        <span id="doctor-meta" style="font-size: 15px; color: #5B6672">Cardiología · Consultorio 3</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 16px">Tipo de atención</h2>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <label style="display: flex; align-items: center; gap: 14px; height: 60px; box-sizing: border-box; padding: 0 16px; border: 2px solid #0B5FA5; border-radius: 14px; background: #F4F8FC">
+          <input type="radio" name="tipo" value="Primera consulta" data-select-type checked style="width: 20px; height: 20px; margin: 0; accent-color: #0B5FA5">
+          <span style="display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 16px; font-weight: 500">Primera consulta</span>
+            <span style="font-size: 13px; color: #5B6672">30 min</span>
+          </span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 14px; height: 60px; box-sizing: border-box; padding: 0 16px; border: 1px solid #D5DEE8; border-radius: 14px; background: #FFFFFF">
+          <input type="radio" name="tipo" value="Seguimiento" data-select-type style="width: 20px; height: 20px; margin: 0; accent-color: #0B5FA5">
+          <span style="display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 16px; font-weight: 500">Seguimiento</span>
+            <span style="font-size: 13px; color: #5B6672">20 min</span>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h2 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 16px">Fecha</h2>
+        <span style="font-size: 13px; color: #5B6672">Desliza o usa las flechas para cambiar de semana.</span>
+      </div>
+      <div class="week-controls">
+        <button type="button" data-week-step="-1" aria-label="Semana anterior" aria-controls="date-options">‹</button>
+        <span id="week-label" aria-live="polite"></span>
+        <button type="button" data-week-step="1" aria-label="Semana siguiente" aria-controls="date-options">›</button>
+      </div>
+      <div id="date-options" class="date-options" role="group" aria-label="Calendario semanal">
+        <div id="week-track" class="week-track"></div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 16px">Horario</h2>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+        <button type="button" data-select-time aria-pressed="false" style="height: 44px; border: 0; border-radius: 12px; background: #F4F8FC; color: #1A1A1A; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 500">09:00</button>
+        <button type="button" data-select-time aria-pressed="false" style="height: 44px; border: 0; border-radius: 12px; background: #F4F8FC; color: #1A1A1A; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 500">09:30</button>
+        <button type="button" data-select-time aria-pressed="true" style="height: 44px; border: 0; border-radius: 12px; background: #0B5FA5; color: #FFFFFF; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700">10:30</button>
+        <button type="button" data-select-time aria-pressed="false" style="height: 44px; border: 0; border-radius: 12px; background: #F4F8FC; color: #1A1A1A; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 500">11:00</button>
+        <button type="button" disabled style="height: 44px; border: 0; border-radius: 12px; background: #F4F8FC; color: #9AA5B1; font-family: Roboto, sans-serif; font-size: 15px; text-decoration: line-through">12:00</button>
+        <button type="button" data-select-time aria-pressed="false" style="height: 44px; border: 0; border-radius: 12px; background: #F4F8FC; color: #1A1A1A; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 500">12:30</button>
+      </div>
+    </div>
+  </main>
+
+  <section aria-label="Acciones" style="display: flex; flex-direction: column; gap: 10px; padding: 16px 24px 24px">
+    <span id="slot-summary" style="text-align: center; font-size: 14px; color: #5B6672">Vie 13 nov · 10:30 · Primera consulta</span>
+    <a href="#" data-go="Confirmar" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">Continuar</a>
+  </section>
+</div></section>
+<section class="scr" id="s-Confirmar" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="Medico" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 28px; padding: 8px 24px 0">
+    <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 28px; line-height: 1.15">Confirma tu cita</h1>
+
+    <dl style="margin: 0; display: flex; flex-direction: column; padding: 4px 20px; border-radius: 20px; background: #F4F8FC">
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Médico</dt>
+        <dd data-booking-field="doctorName" style="margin: 0; font-size: 16px; font-weight: 500">Dra. Laura Méndez</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Atención</dt>
+        <dd data-booking-field="type" style="margin: 0; font-size: 16px; font-weight: 500">Cardiología · Primera consulta · 30 min</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Fecha y hora</dt>
+        <dd data-booking-field="dateTime" style="margin: 0; font-size: 16px; font-weight: 500">Viernes 13 de noviembre de 2026 · 10:30</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0">
+        <dt style="font-size: 13px; color: #5B6672">Lugar</dt>
+        <dd data-booking-field="location" style="margin: 0; font-size: 16px; font-weight: 500">Consultorio 3 · Centro Médico Sagrado Corazón</dd>
+      </div>
+    </dl>
+
+    <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #5B6672">Podrás cancelar tu cita hasta con un día de anticipación.</p>
+  </main>
+
+  <section aria-label="Acciones" style="display: flex; flex-direction: column; gap: 4px; padding: 16px 24px 24px">
+    <a href="#" data-action="confirm-booking" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">Confirmar cita</a>
+    <a href="#" data-go="Medico" style="display: flex; align-items: center; justify-content: center; min-height: 48px; font-size: 15px; font-weight: 700; color: #0B5FA5; text-decoration: none">Cambiar horario</a>
+  </section>
+</div></section>
+<section class="scr" id="s-Confirmada" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 0 32px; text-align: center">
+    <span style="display: flex; align-items: center; justify-content: center; width: 96px; height: 96px; border-radius: 48px; background: #E3F6EC">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#17724A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Confirmada"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+    </span>
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 28px; line-height: 1.15">Cita confirmada</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #5B6672">Te enviaremos un recordatorio antes de tu cita.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px; padding: 16px 24px; border-radius: 16px; background: #F4F8FC">
+      <span data-appointment-field="doctor" style="font-size: 16px; font-weight: 500">Cardiología · Dra. Laura Méndez</span>
+      <span data-appointment-field="summary" style="font-size: 14px; color: #5B6672">Vie 13 nov · 10:30 · Consultorio 3</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 24px 24px">
+    <a href="#" data-go="MisCitas" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">Ver mis citas</a>
+    <a href="#" data-go="Explorar" style="display: flex; align-items: center; justify-content: center; min-height: 48px; font-size: 15px; font-weight: 700; color: #0B5FA5; text-decoration: none">Volver al inicio</a>
+  </div>
+</div></section>
+<section class="scr" id="s-MisCitas" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 20px; padding: 24px 24px 0">
+    <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 24px; line-height: 1.2">Mis citas</h1>
+
+    <div role="tablist" aria-label="Filtrar citas" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: #F4F8FC">
+      <button type="button" role="tab" data-aria="proxSel" data-click="showProx" data-style="proxStyle">Próximas</button>
+      <button type="button" role="tab" data-aria="histSel" data-click="showHist" data-style="histStyle">Historial</button>
+    </div>
+
+    <div data-if="inProx" style="display:contents">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <a href="#" data-go="Detalle" data-booking-card style="display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 18px; background: #F4F8FC; color: #1A1A1A; text-decoration: none">
+        <span style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 56px; height: 64px; border-radius: 14px; background: #FFFFFF; color: #0B5FA5">
+          <span data-appointment-field="day" style="font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 20px; line-height: 1">13</span>
+          <span style="font-size: 12px; font-weight: 500; text-transform: uppercase">nov</span>
+        </span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <span data-appointment-field="specialty" style="font-size: 16px; font-weight: 500">Cardiología</span>
+          <span data-appointment-field="listSummary" style="font-size: 14px; color: #5B6672">Dra. Laura Méndez · 10:30</span>
+          <span data-appointment-field="status" style="align-self: flex-start; display: flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 12px; background: #DCEAF7; color: #0B5FA5; font-size: 12px; font-weight: 500">Confirmada</span>
+        </span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+
+      <a href="#" data-go="Detalle" style="display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 18px; background: #F4F8FC; color: #1A1A1A; text-decoration: none">
+        <span style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 56px; height: 64px; border-radius: 14px; background: #FFFFFF; color: #0B5FA5">
+          <span style="font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 20px; line-height: 1">17</span>
+          <span style="font-size: 12px; font-weight: 500; text-transform: uppercase">nov</span>
+        </span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 16px; font-weight: 500">Nutrición</span>
+          <span style="font-size: 14px; color: #5B6672">Lic. Paula Vargas · 09:00</span>
+          <span style="align-self: flex-start; display: flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 12px; background: #DCEAF7; color: #0B5FA5; font-size: 12px; font-weight: 500">Confirmada</span>
+        </span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+    </div>
+
+    <div data-if="inHist" style="display:contents">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <a href="#" data-go="DetalleHistorial" style="display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 18px; background: #F4F8FC; color: #1A1A1A; text-decoration: none">
+        <span style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 56px; height: 64px; border-radius: 14px; background: #FFFFFF; color: #5B6672">
+          <span style="font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 20px; line-height: 1">05</span>
+          <span style="font-size: 12px; font-weight: 500; text-transform: uppercase">nov</span>
+        </span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 16px; font-weight: 500">Neurología</span>
+          <span style="font-size: 14px; color: #5B6672">Dr. Iván Robles · 09:00</span>
+          <span style="align-self: flex-start; display: flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 12px; background: #E4F4EC; color: #0F6B3F; font-size: 12px; font-weight: 500">Completada</span>
+        </span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#" data-go="DetalleHistorial" style="display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 18px; background: #F4F8FC; color: #1A1A1A; text-decoration: none">
+        <span style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 56px; height: 64px; border-radius: 14px; background: #FFFFFF; color: #5B6672">
+          <span style="font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 20px; line-height: 1">02</span>
+          <span style="font-size: 12px; font-weight: 500; text-transform: uppercase">nov</span>
+        </span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 16px; font-weight: 500">Cardiología</span>
+          <span style="font-size: 14px; color: #5B6672">Dra. Laura Méndez · 10:30</span>
+          <span style="align-self: flex-start; display: flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 12px; background: #FDECEA; color: #B42318; font-size: 12px; font-weight: 500">Cancelada</span>
+        </span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#" data-go="DetalleHistorial" style="display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 18px; background: #F4F8FC; color: #1A1A1A; text-decoration: none">
+        <span style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 56px; height: 64px; border-radius: 14px; background: #FFFFFF; color: #5B6672">
+          <span style="font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 20px; line-height: 1">29</span>
+          <span style="font-size: 12px; font-weight: 500; text-transform: uppercase">oct</span>
+        </span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 16px; font-weight: 500">Nutrición</span>
+          <span style="font-size: 14px; color: #5B6672">Lic. Paula Vargas · 09:30</span>
+          <span style="align-self: flex-start; display: flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 12px; background: #EDF1F5; color: #4A5561; font-size: 12px; font-weight: 500">Inasistencia</span>
+        </span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+    </div>
+
+    <a href="#" data-go="Explorar" style="display: flex; align-items: center; justify-content: center; height: 52px; border: 1.5px solid #0B5FA5; border-radius: 14px; box-sizing: border-box; color: #0B5FA5; font-size: 15px; font-weight: 700; text-decoration: none">Reservar una cita</a>
+  </main>
+
+  <nav aria-label="Navegación principal" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: 72px; box-sizing: border-box; border-top: 1px solid #E3EAF2; background: #FFFFFF">
+    <a href="#" data-go="Explorar" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #5B6672; font-size: 12px; font-weight: 500; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>
+      Explorar
+    </a>
+    <a href="#" data-go="MisCitas" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #0B5FA5; font-size: 12px; font-weight: 700; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>
+      Citas
+    </a>
+    <a href="#" data-go="Perfil" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #5B6672; font-size: 12px; font-weight: 500; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg>
+      Cuenta
+    </a>
+  </nav>
+</div></section>
+<section class="scr" id="s-Detalle" hidden><div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="MisCitas" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 28px; padding: 8px 24px 0">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span style="align-self: flex-start; display: flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 13px; background: #DCEAF7; color: #0B5FA5; font-size: 13px; font-weight: 500">Confirmada</span>
+      <h1 data-appointment-field="date" style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 26px; line-height: 1.2">Viernes 13 de noviembre</h1>
+      <span data-appointment-field="timeDuration" style="font-size: 16px; color: #5B6672">10:30 · 30 min</span>
+    </div>
+
+    <dl style="margin: 0; display: flex; flex-direction: column; padding: 4px 20px; border-radius: 20px; background: #F4F8FC">
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Médico</dt>
+        <dd data-appointment-field="doctorName" style="margin: 0; font-size: 16px; font-weight: 500">Dra. Laura Méndez</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Atención</dt>
+        <dd data-appointment-field="typeShort" style="margin: 0; font-size: 16px; font-weight: 500">Cardiología · Primera consulta</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0">
+        <dt style="font-size: 13px; color: #5B6672">Lugar</dt>
+        <dd data-appointment-field="location" style="margin: 0; font-size: 16px; font-weight: 500">Consultorio 3 · Centro Médico Sagrado Corazón</dd>
+      </div>
+    </dl>
+  </main>
+
+  <section aria-label="Acciones" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 24px 24px">
+    <button type="button" data-click="openSheet" style="width: 100%; height: 52px; border: 1.5px solid #B42318; border-radius: 14px; background: #FFFFFF; color: #B42318; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700">Cancelar cita</button>
+    <span style="padding-top: 8px; font-size: 13px; color: #5B6672">Disponible hasta un día antes de la cita.</span>
+  </section>
+
+  <div data-if="showSheet" style="display:contents">
+    <div style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(26, 26, 26, 0.45)">
+      <div role="dialog" aria-modal="true" aria-labelledby="sheet-title" style="display: flex; flex-direction: column; gap: 20px; padding: 28px 24px 24px; border-radius: 24px 24px 0 0; background: #FFFFFF">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <h2 id="Detalle-sheet-title" style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 22px; line-height: 1.2">¿Cancelar esta cita?</h2>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5B6672">Se liberará el horario del viernes 13 a las 10:30. Esta acción no se puede deshacer.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <a href="#" data-action="cancel-booking" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #B42318; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">Sí, cancelar cita</a>
+          <button type="button" data-click="closeSheet" style="height: 48px; border: 0; background: transparent; color: #0B5FA5; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700">Conservar cita</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></section>
+<section class="scr" id="s-Notificaciones" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="Explorar" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 8px 24px 0">
+    <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 28px; line-height: 1.15">Notificaciones</h1>
+
+    <div style="display: flex; flex-direction: column">
+      <a href="#" data-go="Detalle" style="display: flex; align-items: flex-start; gap: 12px; padding: 18px 0; border-bottom: 1px solid #EDF1F5; color: #1A1A1A; text-decoration: none">
+        <span style="flex: none; width: 10px; height: 10px; margin-top: 6px; border-radius: 5px; background: #0B5FA5"></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <span style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+            <span style="font-size: 16px; font-weight: 700">Cita confirmada</span>
+            <span style="font-size: 12px; color: #5B6672">Hace 5 min</span>
+          </span>
+          <span style="font-size: 14px; line-height: 1.45; color: #5B6672">Cardiología, viernes 13 de noviembre a las 10:30.</span>
+        </span>
+      </a>
+
+      <a href="#" data-go="Detalle" style="display: flex; align-items: flex-start; gap: 12px; padding: 18px 0; border-bottom: 1px solid #EDF1F5; color: #1A1A1A; text-decoration: none">
+        <span style="flex: none; width: 10px; height: 10px; margin-top: 6px"></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <span style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+            <span style="font-size: 16px; font-weight: 500">Recordatorio</span>
+            <span style="font-size: 12px; color: #5B6672">Ayer</span>
+          </span>
+          <span style="font-size: 14px; line-height: 1.45; color: #5B6672">Tienes una cita de Nutrición el martes 17 a las 09:00.</span>
+        </span>
+      </a>
+
+      <a href="#" data-go="MisCitas" style="display: flex; align-items: flex-start; gap: 12px; padding: 18px 0; color: #1A1A1A; text-decoration: none">
+        <span style="flex: none; width: 10px; height: 10px; margin-top: 6px"></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <span style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+            <span style="font-size: 16px; font-weight: 500">Cita cancelada</span>
+            <span style="font-size: 12px; color: #5B6672">9 nov</span>
+          </span>
+          <span style="font-size: 14px; line-height: 1.45; color: #5B6672">Tu cita de Eco del 10 de noviembre fue cancelada.</span>
+        </span>
+      </a>
+    </div>
+  </main>
+</div></section>
+<section class="scr" id="s-Perfil" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 28px; padding: 24px 24px 0">
+    <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 24px; line-height: 1.2">Cuenta</h1>
+
+    <div style="display: flex; align-items: center; gap: 16px">
+      <span style="display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 36px; background: #D9E9F6; color: #0B5FA5; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 24px">ML</span>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span id="profile-name" style="font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 20px; line-height: 1.2">María López</span>
+        <span id="profile-email" style="font-size: 14px; color: #5B6672">maria.lopez@correo.com</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column">
+      <a href="#" data-go="MDatos" style="display: flex; align-items: center; justify-content: space-between; min-height: 60px; border-bottom: 1px solid #EDF1F5; color: #1A1A1A; font-size: 16px; text-decoration: none">
+        Datos personales
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#" data-go="MCambiarClave" style="display: flex; align-items: center; justify-content: space-between; min-height: 60px; border-bottom: 1px solid #EDF1F5; color: #1A1A1A; font-size: 16px; text-decoration: none">
+        Cambiar contraseña
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#" data-go="Notificaciones" style="display: flex; align-items: center; justify-content: space-between; min-height: 60px; color: #1A1A1A; font-size: 16px; text-decoration: none">
+        Notificaciones
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+
+    <a href="#" data-go="Main" style="align-self: flex-start; display: flex; align-items: center; min-height: 48px; color: #B42318; font-size: 15px; font-weight: 700; text-decoration: none">Cerrar sesión</a>
+  </main>
+
+  <nav aria-label="Navegación principal" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: 72px; box-sizing: border-box; border-top: 1px solid #E3EAF2; background: #FFFFFF">
+    <a href="#" data-go="Explorar" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #5B6672; font-size: 12px; font-weight: 500; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>
+      Explorar
+    </a>
+    <a href="#" data-go="MisCitas" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #5B6672; font-size: 12px; font-weight: 500; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>
+      Citas
+    </a>
+    <a href="#" data-go="Perfil" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #0B5FA5; font-size: 12px; font-weight: 700; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg>
+      Cuenta
+    </a>
+  </nav>
+</div></section>
+<section class="scr" id="s-MEspecialidad" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="Explorar" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 20px; padding: 8px 24px 0">
+    <div style="display: flex; flex-direction: column; gap: 8px"><h1 id="specialty-title" style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 28px; line-height: 1.15">Cardiología</h1><p id="specialty-hint" style="margin: 0; font-size: 16px; line-height: 1.5; color: #5B6672">Elige un médico para ver sus horarios.</p></div>
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <a href="#" data-go="Medico" data-doctor="laura" data-specialty-card="Cardiología" style="display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 18px; background: #F4F8FC; color: #1A1A1A; text-decoration: none">
+        <span style="flex: none; display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 28px; background: #D9E9F6; color: #0B5FA5; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 18px">LM</span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 500">Dra. Laura Méndez</span><span style="font-size: 14px; color: #5B6672">Cardiología · Consultorio 3</span><span style="font-size: 13px; font-weight: 500; color: #0B5FA5">Próximo horario: vie 13 nov · 10:30</span></span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#" data-go="Medico" data-doctor="hugo" data-specialty-card="Cardiología" style="display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 18px; background: #F4F8FC; color: #1A1A1A; text-decoration: none">
+        <span style="flex: none; display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 28px; background: #D9E9F6; color: #0B5FA5; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 18px">HS</span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 500">Dr. Hugo Salas</span><span style="font-size: 14px; color: #5B6672">Cardiología · Consultorio 1</span><span style="font-size: 13px; font-weight: 500; color: #0B5FA5">Próximo horario: lun 16 nov · 09:00</span></span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#" data-go="Medico" data-doctor="ivan" data-specialty-card="Neurología" style="display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 18px; background: #F4F8FC; color: #1A1A1A; text-decoration: none">
+        <span style="flex: none; display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 28px; background: #D9E9F6; color: #0B5FA5; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 18px">IR</span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 500">Dr. Iván Robles</span><span style="font-size: 14px; color: #5B6672">Neurología · Consultorio 2</span><span style="font-size: 13px; font-weight: 500; color: #0B5FA5">Consulta su disponibilidad</span></span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#" data-go="Medico" data-doctor="paula" data-specialty-card="Nutrición" style="display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 18px; background: #F4F8FC; color: #1A1A1A; text-decoration: none">
+        <span style="flex: none; display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 28px; background: #D9E9F6; color: #0B5FA5; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 18px">PV</span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 500">Lic. Paula Vargas</span><span style="font-size: 14px; color: #5B6672">Nutrición</span><span style="font-size: 13px; font-weight: 500; color: #0B5FA5">Consulta su disponibilidad</span></span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+    <p id="specialty-empty" hidden style="margin: 0; font-size: 14px; color: #5B6672">Por ahora no hay médicos disponibles para esta especialidad.</p>
+  </main>
+</div></section>
+<section class="scr" id="s-MisCitasVacio" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 20px; padding: 24px 24px 0">
+    <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 24px; line-height: 1.2">Mis citas</h1>
+
+    <div role="tablist" aria-label="Filtrar citas" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: #F4F8FC">
+      <button type="button" role="tab" data-empty-tab="prox" aria-selected="true" style="height: 44px; border: 0; border-radius: 11px; background: #FFFFFF; color: #0B5FA5; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700">Próximas</button>
+      <button type="button" role="tab" data-empty-tab="hist" aria-selected="false" style="height: 44px; border: 0; border-radius: 11px; background: transparent; color: #5B6672; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 500">Historial</button>
+    </div>
+
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 16px">
+      <span style="display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 32px; background: #F4F8FC"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></span>
+      <h2 id="empty-title" style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 600; font-size: 18px">No tienes citas próximas</h2>
+      <p id="empty-description" style="margin: 0; font-size: 15px; line-height: 1.5; color: #5B6672">Cuando reserves una cita, aparecerá aquí.</p>
+    </div>
+
+    <a href="#" data-go="Explorar" style="display: flex; align-items: center; justify-content: center; height: 52px; border: 1.5px solid #0B5FA5; border-radius: 14px; box-sizing: border-box; color: #0B5FA5; font-size: 15px; font-weight: 700; text-decoration: none">Reservar una cita</a>
+  </main>
+
+  <nav aria-label="Navegación principal" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: 72px; box-sizing: border-box; border-top: 1px solid #E3EAF2; background: #FFFFFF">
+    <a href="#" data-go="Explorar" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #5B6672; font-size: 12px; font-weight: 500; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>
+      Explorar
+    </a>
+    <a href="#" data-go="MisCitas" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #0B5FA5; font-size: 12px; font-weight: 700; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>
+      Citas
+    </a>
+    <a href="#" data-go="Perfil" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #5B6672; font-size: 12px; font-weight: 500; text-decoration: none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg>
+      Cuenta
+    </a>
+  </nav>
+</div></section>
+<section class="scr" id="s-DetalleHistorial" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="MisCitas" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 28px; padding: 8px 24px 0">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span style="align-self: flex-start; display: flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 13px; background: #E4F4EC; color: #0F6B3F; font-size: 13px; font-weight: 500">Completada</span>
+      <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 26px; line-height: 1.2">Jueves 5 de noviembre</h1>
+      <span style="font-size: 16px; color: #5B6672">09:00 · 30 min</span>
+    </div>
+
+    <dl style="margin: 0; display: flex; flex-direction: column; padding: 4px 20px; border-radius: 20px; background: #F4F8FC">
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Médico</dt>
+        <dd style="margin: 0; font-size: 16px; font-weight: 500">Dr. Iván Robles</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Atención</dt>
+        <dd style="margin: 0; font-size: 16px; font-weight: 500">Neurología · Primera consulta</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0">
+        <dt style="font-size: 13px; color: #5B6672">Lugar</dt>
+        <dd style="margin: 0; font-size: 16px; font-weight: 500">Consultorio 2 · Centro Médico Sagrado Corazón</dd>
+      </div>
+    </dl>
+  </main>
+
+  <section aria-label="Acciones" style="display: flex; flex-direction: column; gap: 4px; padding: 16px 24px 24px">
+    <a href="#" data-go="Explorar" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">Reservar otra cita</a>
+    <a href="#" data-go="MisCitas" style="display: flex; align-items: center; justify-content: center; min-height: 48px; font-size: 15px; font-weight: 500; color: #5B6672; text-decoration: none">Volver a mis citas</a>
+  </section>
+</div></section>
+<section class="scr" id="s-DetalleBloqueado" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="MisCitas" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 28px; padding: 8px 24px 0">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <span style="align-self: flex-start; display: flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 13px; background: #DCEAF7; color: #0B5FA5; font-size: 13px; font-weight: 500">Confirmada</span>
+      <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 26px; line-height: 1.2">Jueves 12 de noviembre</h1>
+      <span style="font-size: 16px; color: #5B6672">12:30 · 20 min</span>
+    </div>
+
+    <dl style="margin: 0; display: flex; flex-direction: column; padding: 4px 20px; border-radius: 20px; background: #F4F8FC">
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Médico</dt>
+        <dd style="margin: 0; font-size: 16px; font-weight: 500">Dra. Laura Méndez</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Atención</dt>
+        <dd style="margin: 0; font-size: 16px; font-weight: 500">Cardiología · Seguimiento</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0">
+        <dt style="font-size: 13px; color: #5B6672">Lugar</dt>
+        <dd style="margin: 0; font-size: 16px; font-weight: 500">Consultorio 3 · Centro Médico Sagrado Corazón</dd>
+      </div>
+    </dl>
+  </main>
+
+  <section aria-label="Acciones" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 24px 24px">
+    <button type="button" aria-disabled="true" aria-describedby="no-cancel" style="width: 100%; height: 52px; border: 1.5px solid #D5DEE8; border-radius: 14px; background: #F4F8FC; color: #5B6672; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700; cursor: not-allowed">Cancelar cita</button>
+    <span id="DetalleBloqueado-no-cancel" style="padding-top: 8px; font-size: 14px; line-height: 1.45; text-align: center; color: #5B6672">Ya no puedes cancelar esta cita porque faltan menos de 24 horas. Para cambiarla, comunícate con el centro médico: [TELÉFONO].</span>
+  </section>
+</div></section>
+<section class="scr" id="s-ConfirmarError" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="Medico" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 28px; padding: 8px 24px 0">
+    <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 28px; line-height: 1.15">Confirma tu cita</h1>
+
+    <div role="alert" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 12px; background: #FDECEA; color: #B42318; font-size: 14px; line-height: 1.45"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg><span><b>Ese horario ya no está disponible.</b> Otra persona lo reservó hace un momento. Elige otro horario para continuar.</span></div>
+
+    <dl style="margin: 0; display: flex; flex-direction: column; padding: 4px 20px; border-radius: 20px; background: #F4F8FC">
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Médico</dt>
+        <dd style="margin: 0; font-size: 16px; font-weight: 500">Dra. Laura Méndez</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Atención</dt>
+        <dd style="margin: 0; font-size: 16px; font-weight: 500">Cardiología · Primera consulta · 30 min</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0; border-bottom: 1px solid #E3EAF2">
+        <dt style="font-size: 13px; color: #5B6672">Fecha y hora</dt>
+        <dd style="margin: 0; font-size: 16px; font-weight: 500">Viernes 13 de noviembre de 2026 · 10:30</dd>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px 0">
+        <dt style="font-size: 13px; color: #5B6672">Lugar</dt>
+        <dd style="margin: 0; font-size: 16px; font-weight: 500">Consultorio 3 · Centro Médico Sagrado Corazón</dd>
+      </div>
+    </dl>
+
+    <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #5B6672">Podrás cancelar tu cita hasta con un día de anticipación.</p>
+  </main>
+
+  <section aria-label="Acciones" style="display: flex; flex-direction: column; gap: 4px; padding: 16px 24px 24px">
+    <a href="#" data-go="Medico" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">Elegir otro horario</a>
+  </section>
+</div></section>
+<section class="scr" id="s-MDatos" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="Perfil" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 20px; padding: 8px 24px 0">
+    <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 26px; line-height: 1.15">Datos personales</h1>
+    <div data-if="showSaved" style="display:contents"><div role="status" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; background: #E3F6EC; color: #17724A; font-size: 14px; font-weight: 500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M5 12l5 5 9-10"/></svg>Cambios guardados</div></div>
+    <div style="display: flex; flex-direction: column; gap: 8px"><label for="MDatos-nombre" style="font-size: 14px; font-weight: 500">Nombre(s)</label><input id="MDatos-nombre" type="text" value="María" autocomplete="given-name" required style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF"></div>
+    <div style="display: flex; flex-direction: column; gap: 8px"><label for="MDatos-apellido-paterno" style="font-size: 14px; font-weight: 500">Apellido paterno</label><input id="MDatos-apellido-paterno" type="text" value="López" autocomplete="family-name" required style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF"></div>
+    <div style="display: flex; flex-direction: column; gap: 8px"><label for="MDatos-apellido-materno" style="font-size: 14px; font-weight: 500">Apellido materno (opcional)</label><input id="MDatos-apellido-materno" type="text" value="Ruiz" autocomplete="family-name" style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF"></div>
+    <div style="display: flex; flex-direction: column; gap: 8px"><label for="MDatos-tel" style="font-size: 14px; font-weight: 500">Teléfono</label><input id="MDatos-tel" type="tel" value="789 000 0001" autocomplete="tel" required style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF"></div>
+    <div style="display: flex; flex-direction: column; gap: 8px"><label for="MDatos-mail" style="font-size: 14px; font-weight: 500">Correo electrónico</label><input id="MDatos-mail" type="email" value="maria.lopez@correo.com" readonly aria-describedby="mail-nota" style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF; background: #F4F8FC; color: #5B6672"><span id="MDatos-mail-nota" style="font-size: 13px; color: #5B6672">Es tu usuario y no se puede cambiar desde la app.</span></div>
+  </main>
+  <section aria-label="Acciones" style="padding: 16px 24px 24px"><button type="button" data-click="save" style="display: flex; align-items: center; justify-content: center; height: 52px; width: 100%; border: 0; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700; text-decoration: none; cursor: pointer">Guardar cambios</button></section>
+</div></section>
+<section class="scr" id="s-MCambiarClave" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="Perfil" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 20px; padding: 8px 24px 0">
+    <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 26px; line-height: 1.15">Cambiar contraseña</h1>
+    <div data-if="showSaved" style="display:contents"><div role="status" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; background: #E3F6EC; color: #17724A; font-size: 14px; font-weight: 500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M5 12l5 5 9-10"/></svg>Contraseña actualizada</div></div>
+    <div style="display: flex; flex-direction: column; gap: 8px"><label for="MCambiarClave-actual" style="font-size: 14px; font-weight: 500">Contraseña actual</label><input id="MCambiarClave-actual" type="password" autocomplete="current-password" required style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF"></div>
+    <div style="display: flex; flex-direction: column; gap: 8px"><label for="MCambiarClave-nueva" style="font-size: 14px; font-weight: 500">Contraseña nueva</label><input id="MCambiarClave-nueva" type="password" autocomplete="new-password" minlength="8" pattern="(?=.*[A-Za-z])(?=.*[0-9]).{8,}" required style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF"></div>
+    <div style="display: flex; flex-direction: column; gap: 8px"><label for="MCambiarClave-confirmar" style="font-size: 14px; font-weight: 500">Confirmar contraseña nueva</label><input id="MCambiarClave-confirmar" type="password" autocomplete="new-password" required style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF"></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #5B6672"><li style="display: flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>Al menos 8 caracteres</li><li style="display: flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>Una letra y un número</li></ul>
+  </main>
+  <section aria-label="Acciones" style="padding: 16px 24px 24px"><button type="button" data-click="save" style="display: flex; align-items: center; justify-content: center; height: 52px; width: 100%; border: 0; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700; text-decoration: none; cursor: pointer">Guardar contraseña</button></section>
+</div></section>
+<section class="scr" id="s-MRecuperar" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="Main" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <div data-if="showForm" style="display:contents">
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 24px; padding: 8px 24px 0">
+    <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 28px; background: #E4EFF9"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0B5FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="3"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></span>
+    <div style="display: flex; flex-direction: column; gap: 10px"><h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 28px; line-height: 1.15">Recuperar contraseña</h1><p style="margin: 0; font-size: 16px; line-height: 1.5; color: #5B6672">Escribe tu correo y te enviaremos un enlace para crear una contraseña nueva.</p></div>
+    <div style="display: flex; flex-direction: column; gap: 8px"><label for="MRecuperar-correo" style="font-size: 14px; font-weight: 500">Correo electrónico</label><input id="MRecuperar-correo" type="email" placeholder="nombre@correo.com" autocomplete="username" required style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF"></div>
+    <button type="button" data-click="send" style="display: flex; align-items: center; justify-content: center; height: 52px; width: 100%; border: 0; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700; text-decoration: none; cursor: pointer">Enviar enlace</button>
+  </main>
+  </div>
+  <div data-if="showSent" style="display:contents">
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 24px; padding: 8px 24px 0">
+    <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 28px; background: #E3F6EC"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#17724A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7l8 6 8-6"/></svg></span>
+    <div style="display: flex; flex-direction: column; gap: 10px"><h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 28px; line-height: 1.15">Revisa tu correo</h1><p style="margin: 0; font-size: 16px; line-height: 1.5; color: #5B6672">Si el correo está registrado, recibirás un enlace para restablecer tu contraseña. El enlace vence en 30 minutos.</p></div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <a href="#" data-go="MNuevaClave" style="display: flex; align-items: center; justify-content: center; height: 52px; width: 100%; border: 0; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700; text-decoration: none; cursor: pointer">Abrir enlace del correo (vista de ejemplo)</a>
+      <button type="button" data-click="again" style="display: flex; align-items: center; justify-content: center; min-height: 48px; width: 100%; border: 0; background: transparent; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700; color: #0B5FA5; text-decoration: none; cursor: pointer">Usar otro correo</button>
+    </div>
+  </main>
+  </div>
+  <section aria-label="Acciones" style="padding: 0 24px 24px"><a href="#" data-go="Main" style="display: flex; align-items: center; justify-content: center; min-height: 48px; width: 100%; border: 0; background: transparent; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700; color: #0B5FA5; text-decoration: none; cursor: pointer; font-weight: 500; color: #5B6672">Volver a iniciar sesión</a></section>
+</div></section>
+<section class="scr" id="s-MNuevaClave" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <nav aria-label="Volver" style="padding: 20px 14px 0">
+    <a href="#" data-go="MRecuperar" aria-label="Volver" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: #1A1A1A">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+  </nav>
+
+  <div data-if="showForm" style="display:contents">
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 24px; padding: 8px 24px 0">
+    <div style="display: flex; flex-direction: column; gap: 10px"><h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 28px; line-height: 1.15">Crea tu nueva contraseña</h1><p style="margin: 0; font-size: 16px; line-height: 1.5; color: #5B6672">Elige una contraseña que no uses en otros sitios.</p></div>
+    <div style="display: flex; flex-direction: column; gap: 8px"><label for="MNuevaClave-nueva" style="font-size: 14px; font-weight: 500">Contraseña nueva</label><input id="MNuevaClave-nueva" type="password" autocomplete="new-password" minlength="8" pattern="(?=.*[A-Za-z])(?=.*[0-9]).{8,}" required style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF"></div>
+    <div style="display: flex; flex-direction: column; gap: 8px"><label for="MNuevaClave-confirmar" style="font-size: 14px; font-weight: 500">Confirmar contraseña</label><input id="MNuevaClave-confirmar" type="password" autocomplete="new-password" required style="height: 52px; box-sizing: border-box; width: 100%; border: 1px solid #8B98A7; border-radius: 12px; padding: 0 16px; font-family: Roboto, sans-serif; font-size: 16px; color: #1A1A1A; background: #FFFFFF"></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #5B6672"><li style="display: flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>Al menos 8 caracteres</li><li style="display: flex; align-items: center; gap: 8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6672" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>Una letra y un número</li></ul>
+    <button type="button" data-click="save" style="display: flex; align-items: center; justify-content: center; height: 52px; width: 100%; border: 0; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700; text-decoration: none; cursor: pointer">Guardar contraseña</button>
+  </main>
+  </div>
+  <div data-if="showDone" style="display:contents">
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 24px; padding: 8px 24px 0">
+    <span style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 28px; background: #E3F6EC"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#17724A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></span>
+    <div style="display: flex; flex-direction: column; gap: 10px"><h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 28px; line-height: 1.15">Contraseña actualizada</h1><p style="margin: 0; font-size: 16px; line-height: 1.5; color: #5B6672">Ya puedes iniciar sesión con tu contraseña nueva.</p></div>
+    <a href="#" data-go="Main" style="display: flex; align-items: center; justify-content: center; height: 52px; width: 100%; border: 0; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700; text-decoration: none; cursor: pointer">Iniciar sesión</a>
+  </main>
+  </div>
+</div></section>
+<section class="scr" id="s-SinConexion" hidden><div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #1A1A1A; font-family: Roboto, system-ui, sans-serif; overflow: hidden">
+  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 0 32px; text-align: center">
+    <span style="display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 36px; background: #F4F8FC; color: #5B6672">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M8.5 16.4a5 5 0 017 0"/><path d="M5 12.9a10 10 0 014.2-2.4M19 12.9a10 10 0 00-3.5-2.2"/><path d="M2 8.8a15 15 0 013.6-2.4M22 8.8a15 15 0 00-9.4-3.7"/><path d="M12 20h.01"/></svg>
+    </span>
+    <h1 style="margin: 0; font-family: Montserrat, Roboto, sans-serif; font-weight: 700; font-size: 24px; line-height: 1.2">Sin conexión</h1>
+    <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #5B6672">No pudimos comunicarnos con el servidor. Revisa tu conexión a internet e inténtalo de nuevo.</p>
+  </main>
+  <section aria-label="Acciones" style="display: flex; flex-direction: column; gap: 4px; padding: 16px 24px 24px">
+    <a href="#" data-go="Explorar" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 14px; background: #0B5FA5; color: #FFFFFF; font-size: 15px; font-weight: 700; text-decoration: none">Reintentar</a>
+  </section>
+</div></section>
+      </div>
+    </div>
+  </div>
+
+  <aside class="panel">
+    <h2>Pantallas</h2>
+    <p class="hint">Pantalla actual: <b id="actual"></b></p>
+    <div class="acciones">
+      <button id="btnAtras" disabled>← Regresar</button>
+      <button id="btnInicio">Inicio</button>
+    </div>
+    <h3>Acceso y reservación de citas</h3><button class="item" data-go="Main">1 · Iniciar sesión</button><button class="item" data-go="Registro">2 · Crear cuenta</button><button class="item" data-go="Explorar">3 · Explorar</button><button class="item" data-go="Medico">4 · Médico y horario</button><button class="item" data-go="Confirmar">5 · Confirmar cita</button><button class="item" data-go="Confirmada">6 · Cita confirmada</button><h3>Seguimiento de citas y cuenta</h3><button class="item" data-go="MisCitas">7 · Mis citas</button><button class="item" data-go="Detalle">8 · Detalle y cancelación</button><button class="item" data-go="Notificaciones">9 · Notificaciones</button><button class="item" data-go="Perfil">10 · Cuenta</button><h3>Pantallas alternas</h3><button class="item" data-go="MEspecialidad">Médicos por especialidad</button><button class="item" data-go="MisCitasVacio">Mis citas sin citas</button><button class="item" data-go="DetalleHistorial">Detalle de cita pasada</button><button class="item" data-go="DetalleBloqueado">Cita que ya no se puede cancelar</button><button class="item" data-go="ConfirmarError">Confirmar con error</button><button class="item" data-go="MDatos">Datos personales</button><button class="item" data-go="MCambiarClave">Cambiar contraseña</button><button class="item" data-go="MRecuperar">Recuperar contraseña</button><button class="item" data-go="MNuevaClave">Nueva contraseña</button><button class="item" data-go="SinConexion">Sin conexión</button>
+  </aside>
+</div>
+
+<script>
+  // Mini runtime que imita lo que usan los mockups (DCLogic con state y renderVals)
+  function DCLogic(props) { this.props = props || {}; this.state = {}; }
+  DCLogic.prototype.setState = function (p) { Object.assign(this.state, p); if (this._render) this._render(); };
+
+  var CODES = {"Main": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "Registro": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "Explorar": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "Medico": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "Confirmar": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "Confirmada": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "MisCitas": "class Component extends DCLogic {\nconstructor(props) {\nsuper(props);\nthis.state = { tab: 'prox' };\n}\nrenderVals() {\nconst prox = this.state.tab === 'prox';\nconst on = 'height: 44px; border: 0; border-radius: 11px; background: #FFFFFF; color: #0B5FA5; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 700';\nconst off = 'height: 44px; border: 0; border-radius: 11px; background: transparent; color: #5B6672; font-family: Roboto, sans-serif; font-size: 15px; font-weight: 500';\nreturn {\ninProx: prox,\ninHist: !prox,\nproxSel: prox,\nhistSel: !prox,\nproxStyle: prox ? on : off,\nhistStyle: prox ? off : on,\nshowProx: () => this.setState({ tab: 'prox' }),\nshowHist: () => this.setState({ tab: 'hist' })\n};\n}\n}", "Detalle": "class Component extends DCLogic {\nconstructor(props) {\nsuper(props);\nthis.state = { sheet: false };\n}\nrenderVals() {\nreturn {\nshowSheet: !!this.state.sheet,\nopenSheet: () => this.setState({ sheet: true }),\ncloseSheet: () => this.setState({ sheet: false })\n};\n}\n}", "Notificaciones": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "Perfil": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "MEspecialidad": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "MisCitasVacio": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "DetalleHistorial": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "DetalleBloqueado": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "ConfirmarError": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}", "MDatos": "class Component extends DCLogic {\nconstructor(props) {\nsuper(props);\nthis.state = { saved: false };\n}\nrenderVals() {\nreturn {\nshowSaved: !!this.state.saved,\nsave: () => this.setState({ saved: true })\n};\n}\n}", "MCambiarClave": "class Component extends DCLogic {\nconstructor(props) {\nsuper(props);\nthis.state = { saved: false };\n}\nrenderVals() {\nreturn {\nshowSaved: !!this.state.saved,\nsave: () => this.setState({ saved: true })\n};\n}\n}", "MRecuperar": "class Component extends DCLogic {\nconstructor(props) {\nsuper(props);\nthis.state = { on: false };\n}\nrenderVals() {\nreturn {\nshowForm: !this.state.on,\nshowSent: !!this.state.on,\nsend: () => this.setState({ on: true }),\nagain: () => this.setState({ on: false })\n};\n}\n}", "MNuevaClave": "class Component extends DCLogic {\nconstructor(props) {\nsuper(props);\nthis.state = { done: false };\n}\nrenderVals() {\nreturn {\nshowForm: !this.state.done,\nshowDone: !!this.state.done,\nsave: () => this.setState({ done: true })\n};\n}\n}", "SinConexion": "class Component extends DCLogic {\nrenderVals() {\nreturn {};\n}\n}"};
+  var LABELS = {"Main": "1 · Iniciar sesión", "Registro": "2 · Crear cuenta", "Explorar": "3 · Explorar", "Medico": "4 · Médico y horario", "Confirmar": "5 · Confirmar cita", "Confirmada": "6 · Cita confirmada", "MisCitas": "7 · Mis citas", "Detalle": "8 · Detalle y cancelación", "Notificaciones": "9 · Notificaciones", "Perfil": "10 · Cuenta", "MEspecialidad": "Médicos por especialidad", "MisCitasVacio": "Mis citas sin citas", "DetalleHistorial": "Detalle de cita pasada", "DetalleBloqueado": "Cita que ya no se puede cancelar", "ConfirmarError": "Confirmar con error", "MDatos": "Datos personales", "MCambiarClave": "Cambiar contraseña", "MRecuperar": "Recuperar contraseña", "MNuevaClave": "Nueva contraseña", "SinConexion": "Sin conexión"};
+  var actual = null, historial = [], comp = null;
+  var demoUser = { firstName: "María", lastName: "López", email: "maria.lopez@correo.com" };
+  var doctores = {
+    laura: { name: "Dra. Laura Méndez", initials: "LM", specialty: "Cardiología", clinic: "Consultorio 3" },
+    hugo: { name: "Dr. Hugo Salas", initials: "HS", specialty: "Cardiología", clinic: "Consultorio 1" },
+    ivan: { name: "Dr. Iván Robles", initials: "IR", specialty: "Neurología", clinic: "Consultorio 2" },
+    paula: { name: "Lic. Paula Vargas", initials: "PV", specialty: "Nutrición", clinic: "" }
+  };
+  var doctorSeleccionado = doctores.laura;
+  var especialidadSeleccionada = "Cardiología";
+  var demoAppointment = {
+    dateLabel: "Vie 13 nov",
+    longDate: "Viernes 13 de noviembre de 2026",
+    time: "10:30",
+    type: "Primera consulta",
+    duration: "30 min",
+    doctor: doctores.laura,
+    booked: true,
+    cancelled: false
+  };
+  var bookingDraft = {
+    dateLabel: demoAppointment.dateLabel,
+    longDate: demoAppointment.longDate,
+    time: demoAppointment.time,
+    type: demoAppointment.type,
+    duration: demoAppointment.duration
+  };
+  var fechaMinimaReserva = null;
+  var fechaSeleccionada = null;
+  var semanaVisible = null;
+  var cambiandoSemana = false;
+  var ignorarClickPorSwipe = false;
+
+  function validarPantalla(nombre) {
+    var raiz = document.getElementById("s-" + nombre);
+    if (nombre === "MCambiarClave" || nombre === "MNuevaClave") {
+      var nueva = raiz.querySelector('input[id$="-nueva"]');
+      var confirmar = raiz.querySelector('input[id$="-confirmar"]');
+      confirmar.setCustomValidity(nueva.value === confirmar.value ? "" : "Las contraseñas no coinciden.");
+    }
+    var invalido = Array.from(raiz.querySelectorAll("input[required]")).find(function (input) {
+      return !input.checkValidity();
+    });
+    if (invalido) {
+      invalido.reportValidity();
+      return false;
+    }
+    return true;
+  }
+
+  function actualizarUsuario() {
+    var nombre = [demoUser.firstName, demoUser.lastName].filter(Boolean).join(" ");
+    var profileName = document.getElementById("profile-name");
+    var profileEmail = document.getElementById("profile-email");
+    var greeting = document.getElementById("explore-greeting");
+    if (profileName) profileName.textContent = nombre;
+    if (profileEmail) profileEmail.textContent = demoUser.email;
+    if (greeting) greeting.textContent = "Hola, " + demoUser.firstName;
+  }
+
+  function actualizarDoctor() {
+    var initials = document.getElementById("doctor-initials");
+    var name = document.getElementById("doctor-name");
+    var meta = document.getElementById("doctor-meta");
+    if (initials) initials.textContent = doctorSeleccionado.initials;
+    if (name) name.textContent = doctorSeleccionado.name;
+    if (meta) meta.textContent = doctorSeleccionado.specialty + (doctorSeleccionado.clinic ? " · " + doctorSeleccionado.clinic : "");
+  }
+
+  function copiarFecha(fecha) {
+    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+  }
+
+  function sumarDias(fecha, dias) {
+    var resultado = copiarFecha(fecha);
+    resultado.setDate(resultado.getDate() + dias);
+    return resultado;
+  }
+
+  function inicioSemana(fecha) {
+    var resultado = copiarFecha(fecha);
+    resultado.setDate(resultado.getDate() - (resultado.getDay() + 6) % 7);
+    return resultado;
+  }
+
+  function fechaComoLlave(fecha) {
+    return [fecha.getFullYear(), String(fecha.getMonth() + 1).padStart(2, "0"), String(fecha.getDate()).padStart(2, "0")].join("-");
+  }
+
+  function fechaDesdeLlave(llave) {
+    var partes = llave.split("-").map(Number);
+    return new Date(partes[0], partes[1] - 1, partes[2]);
+  }
+
+  function datosDeFecha(fecha) {
+    var dia = fecha.getDate();
+    var diaCorto = fecha.toLocaleDateString("es-MX", { weekday: "short" }).replace(/\.$/, "");
+    var diaLargo = fecha.toLocaleDateString("es-MX", { weekday: "long" });
+    var mesCorto = fecha.toLocaleDateString("es-MX", { month: "short" }).replace(/\.$/, "");
+    var mesLargo = fecha.toLocaleDateString("es-MX", { month: "long" });
+    return {
+      etiqueta: diaCorto.charAt(0).toUpperCase() + diaCorto.slice(1) + " " + dia + " " + mesCorto,
+      completa: diaLargo.charAt(0).toUpperCase() + diaLargo.slice(1) + " " + dia + " de " + mesLargo + " de " + fecha.getFullYear()
+    };
+  }
+
+  function fechaDisponible(fecha) {
+    return fecha >= fechaMinimaReserva && fecha.getDay() !== 0 && fecha.getDay() !== 6;
+  }
+
+  function crearPaginaSemana(inicio, llaveSeleccionada) {
+    var pagina = document.createElement("div");
+    pagina.className = "week-page";
+    for (var indice = 0; indice < 7; indice++) {
+      var fecha = sumarDias(inicio, indice);
+      var datos = datosDeFecha(fecha);
+      var boton = document.createElement("button");
+      var nombreDia = document.createElement("span");
+      var numeroDia = document.createElement("span");
+      var disponible = fechaDisponible(fecha);
+      boton.type = "button";
+      boton.disabled = !disponible;
+      boton.setAttribute("data-select-date", datos.etiqueta);
+      boton.setAttribute("data-long-date", datos.completa);
+      boton.setAttribute("data-date-key", fechaComoLlave(fecha));
+      boton.setAttribute("aria-label", datos.completa + (disponible ? "" : " (no disponible)"));
+      boton.setAttribute("aria-pressed", String(fechaComoLlave(fecha) === llaveSeleccionada));
+      nombreDia.textContent = fecha.toLocaleDateString("es-MX", { weekday: "short" }).replace(/\.$/, "");
+      numeroDia.textContent = String(fecha.getDate());
+      boton.append(nombreDia, numeroDia);
+      pagina.appendChild(boton);
+    }
+    return pagina;
+  }
+
+  function actualizarEtiquetaSemana() {
+    var fin = sumarDias(semanaVisible, 6);
+    var inicioMes = semanaVisible.toLocaleDateString("es-MX", { month: "short" }).replace(/\.$/, "");
+    var finMes = fin.toLocaleDateString("es-MX", { month: "short" }).replace(/\.$/, "");
+    var etiqueta = semanaVisible.getDate() + (semanaVisible.getMonth() === fin.getMonth() ? "–" + fin.getDate() + " " + finMes : " " + inicioMes + "–" + fin.getDate() + " " + finMes);
+    if (semanaVisible.getFullYear() !== fin.getFullYear()) etiqueta += " " + semanaVisible.getFullYear() + "–" + fin.getFullYear();
+    else etiqueta += " " + fin.getFullYear();
+    document.getElementById("week-label").textContent = etiqueta;
+    document.getElementById("date-options").setAttribute("aria-label", "Semana del " + datosDeFecha(semanaVisible).completa + " al " + datosDeFecha(fin).completa);
+  }
+
+  function renderizarSemanas() {
+    var pista = document.getElementById("week-track");
+    var llaveSeleccionada = fechaSeleccionada ? fechaComoLlave(fechaSeleccionada) : "";
+    var paginas = [
+      crearPaginaSemana(sumarDias(semanaVisible, -7), llaveSeleccionada),
+      crearPaginaSemana(semanaVisible, llaveSeleccionada),
+      crearPaginaSemana(sumarDias(semanaVisible, 7), llaveSeleccionada)
+    ];
+    paginas.forEach(function (pagina, indice) {
+      var fueraDeVista = indice !== 1;
+      pagina.setAttribute("aria-hidden", String(fueraDeVista));
+      pagina.inert = fueraDeVista;
+    });
+    pista.style.transition = "none";
+    pista.replaceChildren.apply(pista, paginas);
+    pista.style.transform = "translateX(-33.333333%)";
+    pista.getBoundingClientRect();
+    pista.style.removeProperty("transition");
+    actualizarEtiquetaSemana();
+  }
+
+  function inicializarFechasDisponibles() {
+    var hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fechaMinimaReserva = sumarDias(hoy, 1);
+    while (fechaMinimaReserva.getDay() === 0 || fechaMinimaReserva.getDay() === 6) {
+      fechaMinimaReserva = sumarDias(fechaMinimaReserva, 1);
+    }
+    fechaSeleccionada = copiarFecha(fechaMinimaReserva);
+    semanaVisible = inicioSemana(fechaSeleccionada);
+    var datos = datosDeFecha(fechaSeleccionada);
+    bookingDraft.dateLabel = datos.etiqueta;
+    bookingDraft.longDate = datos.completa;
+    renderizarSemanas();
+  }
+
+  function cambiarSemana(direccion) {
+    if (cambiandoSemana) return;
+    cambiandoSemana = true;
+    var pista = document.getElementById("week-track");
+    pista.style.transition = "transform 240ms ease";
+    pista.style.transform = direccion > 0 ? "translateX(-66.666667%)" : "translateX(0)";
+    var cambioFinalizado = false;
+    function finalizarCambio(evento) {
+      if (evento && (evento.target !== pista || evento.propertyName !== "transform")) return;
+      if (cambioFinalizado) return;
+      cambioFinalizado = true;
+      pista.removeEventListener("transitionend", finalizarCambio);
+      semanaVisible = sumarDias(semanaVisible, direccion * 7);
+      renderizarSemanas();
+      cambiandoSemana = false;
+    }
+    pista.addEventListener("transitionend", finalizarCambio);
+    window.setTimeout(finalizarCambio, 300);
+  }
+
+  function camposCita(cita, doctor) {
+    var ubicacion = doctor.clinic ? doctor.clinic + " · Centro Médico Sagrado Corazón" : "Centro Médico Sagrado Corazón";
+    return {
+      date: cita.longDate,
+      timeDuration: cita.time + " · " + cita.duration,
+      typeShort: doctor.specialty + " · " + cita.type,
+      type: doctor.specialty + " · " + cita.type + " · " + cita.duration,
+      dateTime: cita.longDate + " · " + cita.time,
+      day: cita.dateLabel.match(/\d+/)[0],
+      specialty: doctor.specialty,
+      doctorName: doctor.name,
+      location: ubicacion,
+      listSummary: doctor.name + " · " + cita.time,
+      status: cita.cancelled ? "Cancelada" : "Confirmada",
+      doctor: doctor.specialty + " · " + doctor.name,
+      summary: cita.dateLabel + " · " + cita.time + (doctor.clinic ? " · " + doctor.clinic : "")
+    };
+  }
+
+  function actualizarCita() {
+    bookingDraft.doctor = doctorSeleccionado;
+    var camposReservados = camposCita(demoAppointment, demoAppointment.doctor);
+    var camposBorrador = camposCita(bookingDraft, doctorSeleccionado);
+    document.querySelectorAll("[data-booking-field]").forEach(function (element) {
+      var value = camposBorrador[element.getAttribute("data-booking-field")];
+      if (value) element.textContent = value;
+    });
+    document.querySelectorAll("[data-appointment-field]").forEach(function (element) {
+      var value = camposReservados[element.getAttribute("data-appointment-field")];
+      if (value) element.textContent = value;
+      if (element.getAttribute("data-appointment-field") === "status") {
+        element.style.background = demoAppointment.cancelled ? "#FDECEA" : "#DCEAF7";
+        element.style.color = demoAppointment.cancelled ? "#B42318" : "#0B5FA5";
+      }
+    });
+    document.querySelectorAll("[data-booking-card]").forEach(function (element) {
+      var ocultar = demoAppointment.cancelled || !demoAppointment.booked;
+      element.hidden = ocultar;
+      element.style.display = ocultar ? "none" : "flex";
+    });
+    var resumen = document.getElementById("slot-summary");
+    if (resumen) resumen.textContent = bookingDraft.dateLabel + " · " + bookingDraft.time + " · " + bookingDraft.type;
+  }
+
+  function actualizarCatalogo() {
+    var titulo = document.getElementById("specialty-title");
+    if (!titulo) return;
+    titulo.textContent = especialidadSeleccionada;
+    var disponibles = 0;
+    document.querySelectorAll("#s-MEspecialidad [data-specialty-card]").forEach(function (tarjeta) {
+      var coincide = tarjeta.getAttribute("data-specialty-card") === especialidadSeleccionada;
+      tarjeta.hidden = !coincide;
+      tarjeta.style.display = coincide ? "flex" : "none";
+      if (coincide) disponibles++;
+    });
+    document.getElementById("specialty-empty").hidden = disponibles > 0;
+    document.getElementById("specialty-hint").hidden = disponibles === 0;
+  }
+
+  function crear(nombre) {
+    var Clase = new Function("DCLogic", CODES[nombre] + "\nreturn Component;")(DCLogic);
+    Clase.prototype = Clase.prototype || {};
+    var c = new Clase({});
+    c._render = function () { pintar(nombre, c); };
+    return c;
+  }
+
+  function pintar(nombre, c) {
+    var raiz = document.getElementById("s-" + nombre);
+    var v = c.renderVals();
+    raiz.querySelectorAll("[data-if]").forEach(function (e) {
+      e.style.display = v[e.getAttribute("data-if")] ? "contents" : "none";
+    });
+    raiz.querySelectorAll("[data-click]").forEach(function (e) {
+      var nombreAccion = e.getAttribute("data-click");
+      var accion = v[nombreAccion];
+      e.onclick = accion ? function (ev) {
+        if ((nombre === "MDatos" || nombre === "MCambiarClave" || nombre === "MRecuperar" || nombre === "MNuevaClave") &&
+            !validarPantalla(nombre)) {
+          ev.preventDefault();
+          return;
+        }
+        if (nombre === "MDatos") {
+          demoUser.firstName = raiz.querySelector("#MDatos-nombre").value.trim();
+          demoUser.lastName = raiz.querySelector("#MDatos-apellido-paterno").value.trim();
+          demoUser.email = raiz.querySelector("#MDatos-mail").value.trim();
+          actualizarUsuario();
+        }
+        accion();
+      } : null;
+    });
+    raiz.querySelectorAll("[data-style]").forEach(function (e) {
+      e.setAttribute("style", v[e.getAttribute("data-style")] || "");
+    });
+    raiz.querySelectorAll("[data-aria]").forEach(function (e) {
+      e.setAttribute("aria-selected", String(!!v[e.getAttribute("data-aria")]));
+    });
+  }
+
+  function ir(nombre, sinHistorial) {
+    if (!CODES[nombre]) return;
+    if (actual && !sinHistorial && actual !== nombre) historial.push(actual);
+    document.querySelectorAll(".scr").forEach(function (s) { s.hidden = (s.id !== "s-" + nombre); });
+    actual = nombre;
+    comp = crear(nombre);
+    pintar(nombre, comp);
+    actualizarCita();
+    actualizarUsuario();
+    actualizarDoctor();
+    actualizarCatalogo();
+    var raiz = document.getElementById("s-" + nombre);
+    raiz.querySelectorAll("*").forEach(function (e) { if (e.scrollTop) e.scrollTop = 0; });
+    document.getElementById("actual").textContent = LABELS[nombre];
+    document.querySelectorAll(".item").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-go") === nombre); });
+    document.getElementById("btnAtras").disabled = historial.length === 0;
+  }
+
+  // Acciones de demostración, selección de horarios y navegación.
+  document.addEventListener("click", function (ev) {
+    if (ignorarClickPorSwipe) {
+      ev.preventDefault();
+      ignorarClickPorSwipe = false;
+      return;
+    }
+
+    var accion = ev.target.closest("[data-action]");
+    if (accion) {
+      ev.preventDefault();
+      var tipoAccion = accion.getAttribute("data-action");
+      if (tipoAccion === "login") {
+        if (!validarPantalla("Main")) return;
+        demoUser.email = document.getElementById("Main-correo").value.trim();
+        ir("Explorar");
+      } else if (tipoAccion === "register") {
+        if (!validarPantalla("Registro")) return;
+        demoUser.firstName = document.getElementById("Registro-nombres").value.trim();
+        demoUser.lastName = document.getElementById("Registro-apellido-paterno").value.trim();
+        demoUser.email = document.getElementById("Registro-correo").value.trim();
+        actualizarUsuario();
+        ir("Explorar");
+      } else if (tipoAccion === "confirm-booking") {
+        demoAppointment = Object.assign({}, bookingDraft, { booked: true, cancelled: false });
+        actualizarCita();
+        ir("Confirmada");
+      } else if (tipoAccion === "cancel-booking") {
+        demoAppointment.booked = false;
+        demoAppointment.cancelled = true;
+        actualizarCita();
+        ir("MisCitas");
+      }
+      return;
+    }
+
+    var pasoSemana = ev.target.closest("[data-week-step]");
+    if (pasoSemana) {
+      ev.preventDefault();
+      cambiarSemana(Number(pasoSemana.getAttribute("data-week-step")));
+      return;
+    }
+
+    var fecha = ev.target.closest("[data-select-date]");
+    var horario = ev.target.closest("[data-select-time]");
+    if (fecha || horario) {
+      var seleccionado = fecha || horario;
+      var selector = fecha ? "#week-track [data-select-date]" : "[data-select-time]";
+      document.querySelectorAll("#s-Medico " + selector).forEach(function (opcion) {
+        var activo = opcion === seleccionado;
+        if (fecha) {
+          activo = opcion.getAttribute("data-date-key") === seleccionado.getAttribute("data-date-key");
+          opcion.setAttribute("aria-pressed", String(activo));
+        } else {
+          opcion.setAttribute("aria-pressed", String(activo));
+          opcion.style.background = activo ? "#0B5FA5" : "#F4F8FC";
+          opcion.style.color = activo ? "#FFFFFF" : "#1A1A1A";
+          opcion.style.fontWeight = activo ? "700" : "500";
+        }
+      });
+      if (fecha) {
+        fechaSeleccionada = fechaDesdeLlave(seleccionado.getAttribute("data-date-key"));
+        bookingDraft.dateLabel = seleccionado.getAttribute("data-select-date");
+        bookingDraft.longDate = seleccionado.getAttribute("data-long-date");
+      } else {
+        bookingDraft.time = seleccionado.textContent.trim();
+      }
+      actualizarCita();
+      return;
+    }
+
+    var tabVacio = ev.target.closest("[data-empty-tab]");
+    if (tabVacio) {
+      var historialVacio = tabVacio.getAttribute("data-empty-tab") === "hist";
+      document.querySelectorAll("#s-MisCitasVacio [data-empty-tab]").forEach(function (tab) {
+        var activo = tab === tabVacio;
+        tab.setAttribute("aria-selected", String(activo));
+        tab.style.background = activo ? "#FFFFFF" : "transparent";
+        tab.style.color = activo ? "#0B5FA5" : "#5B6672";
+        tab.style.fontWeight = activo ? "700" : "500";
+      });
+      document.getElementById("empty-title").textContent = historialVacio ? "No tienes citas en el historial" : "No tienes citas próximas";
+      document.getElementById("empty-description").textContent = historialVacio ? "Cuando completes una cita, aparecerá aquí." : "Cuando reserves una cita, aparecerá aquí.";
+      return;
+    }
+
+    var el = ev.target.closest("[data-go]");
+    if (!el) return;
+    ev.preventDefault();
+    var especialidad = el.getAttribute("data-specialty");
+    var doctorId = el.getAttribute("data-doctor");
+    if (especialidad) especialidadSeleccionada = especialidad;
+    if (doctorId && doctores[doctorId]) {
+      doctorSeleccionado = doctores[doctorId];
+      especialidadSeleccionada = doctorSeleccionado.specialty;
+    }
+    actualizarDoctor();
+    actualizarCita();
+    actualizarCatalogo();
+    ir(el.getAttribute("data-go"));
+  });
+  document.getElementById("s-Medico").addEventListener("change", function (ev) {
+    if (!ev.target.matches("[data-select-type]")) return;
+    bookingDraft.type = ev.target.value;
+    bookingDraft.duration = ev.target.value === "Seguimiento" ? "20 min" : "30 min";
+    actualizarCita();
+  });
+  var inicioDeslizamiento = null;
+  var punteroDeslizamiento = null;
+  document.getElementById("date-options").addEventListener("pointerdown", function (ev) {
+    if (!ev.isPrimary || (ev.pointerType === "mouse" && ev.button !== 0)) return;
+    inicioDeslizamiento = ev.clientX;
+    punteroDeslizamiento = ev.pointerId;
+  });
+  document.addEventListener("pointerup", function (ev) {
+    if (inicioDeslizamiento === null || ev.pointerId !== punteroDeslizamiento) return;
+    var desplazamiento = ev.clientX - inicioDeslizamiento;
+    inicioDeslizamiento = null;
+    punteroDeslizamiento = null;
+    if (Math.abs(desplazamiento) < 40) return;
+    ignorarClickPorSwipe = true;
+    window.setTimeout(function () { ignorarClickPorSwipe = false; }, 350);
+    cambiarSemana(desplazamiento < 0 ? 1 : -1);
+  });
+  document.addEventListener("pointercancel", function (ev) {
+    if (ev.pointerId !== punteroDeslizamiento) return;
+    inicioDeslizamiento = null;
+    punteroDeslizamiento = null;
+  });
+  document.getElementById("s-Explorar").addEventListener("input", function (ev) {
+    if (!ev.target.matches('input[type="search"]')) return;
+    var consulta = ev.target.value.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    var visibles = 0;
+    document.querySelectorAll("#s-Explorar [data-search-item]").forEach(function (elemento) {
+      if (!elemento.dataset.display) elemento.dataset.display = window.getComputedStyle(elemento).display;
+      var texto = elemento.textContent.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      var coincide = !consulta || texto.includes(consulta);
+      elemento.style.display = coincide ? elemento.dataset.display : "none";
+      if (coincide) visibles++;
+    });
+    document.getElementById("search-empty").hidden = !consulta || visibles > 0;
+  });
+  document.getElementById("btnAtras").onclick = function () {
+    if (historial.length) ir(historial.pop(), true);
+  };
+  document.getElementById("btnInicio").onclick = function () { historial = []; ir("Main", true); };
+
+  // Escala el teléfono para que quepa en la ventana
+  function ajustar() {
+    var disp = window.innerHeight - 90;
+    var esc = Math.min(1, Math.max(0.55, disp / 864));
+    var ph = document.getElementById("phone");
+    ph.style.transform = "scale(" + esc + ")";
+    var st = document.getElementById("stage");
+    st.style.width = (410 * esc) + "px";
+    st.style.height = (864 * esc) + "px";
+  }
+  window.addEventListener("resize", ajustar);
+  ajustar();
+  inicializarFechasDisponibles();
+  ir("Main", true);
+</script>
+</body>
+</html>
