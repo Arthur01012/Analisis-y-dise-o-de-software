@@ -6,13 +6,13 @@
 -- del cliente a este esquema sin una migracion probada. La arquitectura objetivo
 -- requiere que React, Android y WinForms consuman exclusivamente las APIs Laravel;
 -- ningun cliente debe conectarse directamente a MariaDB.
--- Ejecutar solo en una instancia donde se autorice crear medicdate_multiplataforma.
+-- Ejecutar solo en una instancia donde se autorice crear innegone_bd_medicdate.
 
-CREATE DATABASE IF NOT EXISTS medicdate_multiplataforma
+CREATE DATABASE IF NOT EXISTS innegone_bd_medicdate
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE medicdate_multiplataforma;
+USE innegone_bd_medicdate;
 
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 

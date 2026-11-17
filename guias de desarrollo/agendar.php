@@ -12,12 +12,6 @@ function responder($codigo, $cuerpo)
 }
 
 try {
-    if (($_SERVER["REQUEST_METHOD"] ?? "GET") !== "POST") {
-        responder(405, [
-            "exito" => false,
-            "mensaje" => "Método no permitido. Use POST."
-        ]);
-    }
 
     $datos = json_decode(file_get_contents("php://input"), true);
     if (!is_array($datos)) {
