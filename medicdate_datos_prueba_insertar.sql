@@ -127,12 +127,45 @@ FROM especialidad e
 WHERE e.nombre = 'Medicina General - Prueba'
 ON DUPLICATE KEY UPDATE nombre = VALUES(nombre);
 
+-- Agenda de prueba de lunes a viernes para cargar horarios en la app.
+INSERT INTO horario_atencion (
+  id_empleado, id_consultorio, dia_semana, hora_inicio, hora_fin,
+  intervalo_minutos, vigencia_desde, vigencia_hasta, activo
+)
+SELECT ed.id_empleado, co.id_consultorio, dias.dia,
+       '09:00:00', '17:00:00', 30, CURDATE(), NULL, 1
+FROM empleado ed
+JOIN persona pd ON pd.id_persona = ed.id_persona
+JOIN doctor d ON d.id_empleado = ed.id_empleado
+JOIN consultorio co ON co.codigo = 'CONS-PRUEBA-01'
+CROSS JOIN (
+  SELECT 1 AS dia UNION ALL SELECT 2 UNION ALL SELECT 3
+  UNION ALL SELECT 4 UNION ALL SELECT 5
+) AS dias
+WHERE pd.correo_contacto = 'jose.rodriguez.doc@example.test'
+AND NOT EXISTS (
+  SELECT 1 FROM horario_atencion h
+  WHERE h.id_empleado = ed.id_empleado
+    AND h.id_consultorio = co.id_consultorio
+    AND h.dia_semana = dias.dia
+    AND h.hora_inicio = '09:00:00'
+    AND h.hora_fin = '17:00:00'
+    AND h.intervalo_minutos = 30
+    AND h.vigencia_desde = CURDATE()
+);
+
+SET @fecha_prueba = CASE DAYOFWEEK(CURDATE())
+  WHEN 6 THEN DATE_ADD(CURDATE(), INTERVAL 3 DAY)
+  WHEN 7 THEN DATE_ADD(CURDATE(), INTERVAL 2 DAY)
+  ELSE DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+END;
+
 INSERT INTO cita (
   id_paciente, id_empleado, id_consultorio, id_tipo_atencion,
   inicio, fin, estado, motivo, costo, moneda, id_usuario_registro
 )
 SELECT pa.id_paciente, d.id_empleado, co.id_consultorio, ta.id_tipo_atencion,
-       TIMESTAMP(CURDATE(), '23:00:00'), TIMESTAMP(CURDATE(), '23:30:00'),
+       TIMESTAMP(@fecha_prueba, '09:00:00'), TIMESTAMP(@fecha_prueba, '09:30:00'),
        'pendiente', 'Cita de prueba', 0.00, 'MXN', ua.id_usuario
 FROM paciente pa
 JOIN persona pp ON pp.id_persona = pa.id_persona
@@ -150,7 +183,7 @@ AND NOT EXISTS (
   SELECT 1 FROM cita c
   WHERE c.id_paciente = pa.id_paciente
     AND c.motivo = 'Cita de prueba'
-    AND DATE(c.inicio) = CURDATE()
+    AND DATE(c.inicio) = @fecha_prueba
 );
 
 INSERT INTO historial_cita (id_cita, id_usuario, estado_nuevo, accion, observacion)
@@ -161,10 +194,47 @@ JOIN persona pp ON pp.id_persona = pa.id_persona
 JOIN usuario ua ON ua.correo_acceso = 'luna.reyes.asistente@example.test'
 WHERE pp.correo_contacto = 'paciente.prueba@example.test'
   AND c.motivo = 'Cita de prueba'
-  AND DATE(c.inicio) = CURDATE()
+  AND DATE(c.inicio) = @fecha_prueba
   AND NOT EXISTS (
     SELECT 1 FROM historial_cita h
     WHERE h.id_cita = c.id_cita AND h.accion = 'creacion'
   );
 
+INSERT INTO notificacion (
+  id_usuario, id_cita, tipo, canal, estado_envio, titulo, mensaje
+)
+SELECT ua.id_usuario, c.id_cita, 'cita_confirmada', 'interno', 'pendiente',
+       'Cita de prueba', 'Cita de prueba para verificar horarios y confirmación.'
+FROM cita c
+JOIN paciente pa ON pa.id_paciente = c.id_paciente
+JOIN persona pp ON pp.id_persona = pa.id_persona
+JOIN usuario ua ON ua.correo_acceso = 'luna.reyes.asistente@example.test'
+WHERE pp.correo_contacto = 'paciente.prueba@example.test'
+  AND c.motivo = 'Cita de prueba'
+  AND DATE(c.inicio) = @fecha_prueba
+  AND NOT EXISTS (
+    SELECT 1 FROM notificacion n
+    WHERE n.id_cita = c.id_cita AND n.tipo = 'cita_confirmada' AND n.canal = 'interno'
+  );
+
+INSERT INTO auditoria (
+  id_usuario, modulo, accion, entidad, id_registro, resultado, observacion
+)
+SELECT ua.id_usuario, 'citas', 'prueba_seed', 'cita', CAST(c.id_cita AS CHAR),
+       'correcto', 'Cita semilla para probar disponibilidad móvil.'
+FROM cita c
+JOIN paciente pa ON pa.id_paciente = c.id_paciente
+JOIN persona pp ON pp.id_persona = pa.id_persona
+JOIN usuario ua ON ua.correo_acceso = 'luna.reyes.asistente@example.test'
+WHERE pp.correo_contacto = 'paciente.prueba@example.test'
+  AND c.motivo = 'Cita de prueba'
+  AND DATE(c.inicio) = @fecha_prueba
+  AND NOT EXISTS (
+    SELECT 1 FROM auditoria a
+    WHERE a.entidad = 'cita'
+      AND CAST(a.id_registro AS UNSIGNED) = c.id_cita
+      AND a.accion = 'prueba_seed'
+  );
+
 COMMIT;
+

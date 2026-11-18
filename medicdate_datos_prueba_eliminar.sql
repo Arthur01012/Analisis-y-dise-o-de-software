@@ -1,5 +1,5 @@
--- Elimina los registros creados por medicdate_datos_prueba_insertar.sql.
--- Conserva las entidades de prueba si otras citas o agendas todavia las referencian.
+-- Elimina los datos de prueba de MedicDate (incluye citas creadas desde la app).
+-- Los correos example.test identifican únicamente las cuentas semilla.
 USE innegone_bd_medicdate;
 
 START TRANSACTION;
@@ -11,7 +11,6 @@ WHERE id_cita IN (
   JOIN paciente pa ON pa.id_paciente = c.id_paciente
   JOIN persona p ON p.id_persona = pa.id_persona
   WHERE p.correo_contacto = 'paciente.prueba@example.test'
-    AND c.motivo = 'Cita de prueba'
 );
 
 DELETE FROM notificacion
@@ -21,7 +20,6 @@ WHERE id_cita IN (
   JOIN paciente pa ON pa.id_paciente = c.id_paciente
   JOIN persona p ON p.id_persona = pa.id_persona
   WHERE p.correo_contacto = 'paciente.prueba@example.test'
-    AND c.motivo = 'Cita de prueba'
 )
 OR id_usuario IN (
   SELECT u.id_usuario
@@ -34,14 +32,35 @@ OR id_usuario IN (
   )
 );
 
+DELETE FROM auditoria
+WHERE id_usuario IN (
+  SELECT u.id_usuario
+  FROM usuario u
+  JOIN persona p ON p.id_persona = u.id_persona
+  WHERE p.correo_contacto IN (
+    'jose.rodriguez.doc@example.test',
+    'luna.reyes.asistente@example.test',
+    'paciente.prueba@example.test'
+  )
+)
+OR (
+  entidad = 'cita'
+  AND CAST(id_registro AS UNSIGNED) IN (
+    SELECT c.id_cita
+    FROM cita c
+    JOIN paciente pa ON pa.id_paciente = c.id_paciente
+    JOIN persona p ON p.id_persona = pa.id_persona
+    WHERE p.correo_contacto = 'paciente.prueba@example.test'
+  )
+);
+
 DELETE FROM cita
 WHERE id_paciente IN (
   SELECT pa.id_paciente
   FROM paciente pa
   JOIN persona p ON p.id_persona = pa.id_persona
   WHERE p.correo_contacto = 'paciente.prueba@example.test'
-)
-AND motivo = 'Cita de prueba';
+);
 
 DELETE FROM horario_atencion
 WHERE id_empleado IN (
