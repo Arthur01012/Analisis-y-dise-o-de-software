@@ -371,35 +371,71 @@ Etapas de trabajo documentadas:
 
 **Frameworks y arquitecturas:** web con React y Laravel en arquitectura cliente-servidor; Android nativo con Kotlin y arquitectura MVP; escritorio existente en C# / Windows Forms sobre .NET 8, pendiente de actualización para usar únicamente las APIs Laravel. La guía Fase 2 menciona PHP para web, sin especificar Laravel; Laravel se incorpora por la decisión posterior del usuario. La guía también propone Repository para organizar acceso a datos, a confirmar en el diseño técnico. QuestPDF se utiliza actualmente en reportes del escritorio. No se atribuye Spring Boot, Thymeleaf ni MVVM a MedicDate: aparecen en materiales de otros proyectos.
 
-## 6. Modelo de datos propuesto
+## 6. Modelo de datos normalizado (Versión 2.1)
 
-El archivo [`medicdate_multiplataforma.sql`](./medicdate_multiplataforma.sql) crea un esquema independiente llamado `medicdate_multiplataforma`; no modifica ni elimina el dump anterior. La guía Fase 2 plantea tomar la base del escritorio como punto de partida y adecuarla, mientras que este SQL propone una estructura separada de 23 tablas. La guía de reparto utiliza nombres/entidades como `usuarios`, `medicos`, `horarios_medico` y `bloqueos`, que tampoco coinciden directamente con los nombres normalizados del SQL (`usuario`, `doctor`, `horario_atencion`, `bloqueo_horario`). Por tanto, el DDL no se debe considerar validado por las guías ni ejecutar como reemplazo: antes se requiere acordar un único modelo, mapear campos e identificadores, migrar datos de prueba y validar reversión.
+El esquema definitivo normalizado se consolida bajo el nombre [`innegone_bd_medicdate`](./medicdate_multiplataforma_v2.sql) (versión 2.1), diseñado en Tercera Forma Normal (3FN) con un total de **31 tablas**. Este modelo unifica los requerimientos de la aplicación de escritorio C# / Windows Forms, la aplicación móvil Android Kotlin, el portal web React y la API REST centralizada en Laravel. El diseño incorpora las tablas de domicilios (`municipio` y `direccion`), unifica los servicios clínicos y públicos en `tipo_atencion`, establece el origen de agendamiento (`canal_registro`), garantiza la asignación obligatoria de médico en cada cita y soporta tanto la recuperación mediante tokens como desafíos mediante preguntas secretas.
 
-### Entidades principales
+### Entidades principales (31 tablas)
 
-- **Identidad y acceso:** `persona`, `usuario`, `rol`, `permiso`, `rol_permiso`, `usuario_rol`, `sesion_usuario`, `token_recuperacion`.
-- **Perfiles:** `paciente`, `empleado`, `asistente`, `doctor`.
-- **Catálogos y capacidad:** `especialidad`, `doctor_especialidad`, `consultorio`, `tipo_atencion`, `horario_atencion`, `bloqueo_horario`.
-- **Operación:** `cita`, `historial_cita`, `notificacion`.
-- **Portal y control:** `contenido_informativo`, `auditoria`.
+- **Identidad y acceso (6):** `persona`, `usuario`, `rol`, `permiso`, `rol_permiso`, `usuario_rol`.
+- **Ubicación y domicilios (2):** `municipio`, `direccion`.
+- **Perfiles (4):** `paciente`, `empleado`, `asistente`, `doctor`.
+- **Catálogos y capacidad (5):** `especialidad`, `doctor_especialidad`, `consultorio`, `tipo_atencion` (unificada con servicios web), `horario_atencion`, `bloqueo_horario`.
+- **Operación de citas (3):** `cita` (con médico obligatorio y canal de registro), `historial_cita`, `notificacion`.
+- **Sesiones y seguridad (4):** `sesion_usuario`, `token_recuperacion`, `pregunta_secreta`, `usuario_pregunta_secreta`.
+- **Portal web público e institucional (5):** `centro_medico` (singleton institucional), `hero_slide`, `resena` (admite pacientes y público externo), `pregunta_frecuente`, `contenido_informativo`, `auditoria`.
 
-El diseño usa relaciones explícitas, claves foráneas, unicidad para cuentas y cédulas, índices para consultas de agenda/historial, fechas de inicio/fin para citas, estados y restricciones `CHECK` básicas. El costo y la moneda en la cita representan el importe registrado para esa reservación, distinto del costo base editable del catálogo. El SQL incluye roles iniciales, pero no asigna permisos: la matriz debe aprobarse y cargarse antes de habilitar usuarios.
+El diseño emplea claves foráneas explícitas con políticas de integridad referencial (`ON DELETE RESTRICT`, `CASCADE` y `SET NULL`), restricciones `CHECK` avanzadas (intervalos temporales, coherencia de cancelación de citas, estrellas de reseñas y regla singleton), unicidad de cuentas, curp y cédulas, e índices optimizados para disponibilidad de agenda.
 
-**Cotejo físico del diccionario:** las 23 tablas y 152 columnas del DDL están representadas en las 23 secciones del diccionario; nombres, tipos base, nulabilidad y valores por omisión coinciden. La revisión encontró que el diccionario omitía los valores permitidos de los estados anterior/nuevo de `historial_cita`; se completaron esos ENUM y se explicitó también el ENUM de `cita.estado`. Esto verifica la descripción de campos frente al DDL, no que todas las reglas operativas estén expresadas como restricciones de base de datos ni que el diseño esté aprobado para producción. La revisión fue estática: no ejecuté el DDL ni modifiqué la base local.
-
-El diccionario de campos, tipos, nulabilidad, claves, valores iniciales y significado funcional de las 23 tablas se documenta en [`Sistema_Integral_Gestion_Citas_Medicas_Centro_Medico_Sagrado_Corazon_Diccionario_Datos.md`](./Sistema_Integral_Gestion_Citas_Medicas_Centro_Medico_Sagrado_Corazon_Diccionario_Datos.md).
+**Cotejo físico del diccionario:** las 31 tablas y sus columnas están exhaustivamente documentadas en el [`Diccionario de Datos`](./Sistema_Integral_Gestion_Citas_Medicas_Centro_Medico_Sagrado_Corazon_Diccionario_Datos.md).
 
 #### Diagrama entidad-relación (ER)
 
-El ER muestra las 23 tablas del esquema actual y sus relaciones; los campos listados son claves y atributos principales para facilitar lectura, no sustituyen el DDL completo.
+El ER representa las 31 tablas del esquema normalizado y sus interrelaciones de integridad referencial.
 
 ```mermaid
 erDiagram
+  PERSONA ||--o| USUARIO : tiene
+  PERSONA ||--o| PACIENTE : perfil
+  PERSONA ||--o| EMPLEADO : perfil
+  PERSONA ||--o{ DIRECCION : reside
+  MUNICIPIO ||--o{ DIRECCION : ubica
+  USUARIO ||--o{ USUARIO_ROL : recibe
+  ROL ||--o{ USUARIO_ROL : asignado
+  ROL ||--o{ ROL_PERMISO : incluye
+  PERMISO ||--o{ ROL_PERMISO : autoriza
+  EMPLEADO ||--o| ASISTENTE : especializa
+  EMPLEADO ||--o| DOCTOR : especializa
+  DOCTOR ||--o{ DOCTOR_ESPECIALIDAD : posee
+  ESPECIALIDAD ||--o{ DOCTOR_ESPECIALIDAD : asignada
+  ESPECIALIDAD ||--o{ TIPO_ATENCION : clasifica
+  DOCTOR ||--o{ HORARIO_ATENCION : programa
+  CONSULTORIO ||--o{ HORARIO_ATENCION : asignado
+  DOCTOR ||--o{ BLOQUEO_HORARIO : bloqueado
+  CONSULTORIO ||--o{ BLOQUEO_HORARIO : afecta
+  USUARIO ||--o{ BLOQUEO_HORARIO : registra
+  PACIENTE ||--o{ CITA : solicita
+  DOCTOR ||--o{ CITA : atiende
+  CONSULTORIO ||--o{ CITA : asignado
+  TIPO_ATENCION ||--o{ CITA : define
+  USUARIO ||--o{ CITA : registra
+  USUARIO ||--o{ CITA : cancela
+  CITA ||--o{ HISTORIAL_CITA : mantiene
+  USUARIO ||--o{ HISTORIAL_CITA : ejecuta
+  USUARIO ||--o{ SESION_USUARIO : inicia
+  USUARIO ||--o{ TOKEN_RECUPERACION : solicita
+  USUARIO ||--o{ USUARIO_PREGUNTA_SECRETA : responde
+  PREGUNTA_SECRETA ||--o{ USUARIO_PREGUNTA_SECRETA : cataloga
+  USUARIO ||--o{ NOTIFICACION : recibe
+  CITA ||--o{ NOTIFICACION : relacionada
+  USUARIO ||--o{ CONTENIDO_INFORMATIVO : redacta
+  USUARIO ||--o{ AUDITORIA : genera
+  PACIENTE ||--o{ RESENA : califica
+
   PERSONA {
     BIGINT id_persona PK
     VARCHAR nombres
     VARCHAR apellido_paterno
-    DATE fecha_nacimiento
     VARCHAR correo_contacto
   }
   USUARIO {
@@ -409,22 +445,17 @@ erDiagram
     VARCHAR password_hash
     ENUM estado
   }
-  ROL {
-    SMALLINT id_rol PK
+  MUNICIPIO {
+    INT id_municipio PK
     VARCHAR nombre
+    VARCHAR estado
   }
-  PERMISO {
-    SMALLINT id_permiso PK
-    VARCHAR codigo
-  }
-  USUARIO_ROL {
-    BIGINT id_usuario PK, FK
-    SMALLINT id_rol PK, FK
-    DATETIME fecha_asignacion
-  }
-  ROL_PERMISO {
-    SMALLINT id_rol PK, FK
-    SMALLINT id_permiso PK, FK
+  DIRECCION {
+    BIGINT id_direccion PK
+    BIGINT id_persona FK
+    INT id_municipio FK
+    VARCHAR calle
+    VARCHAR numero
   }
   PACIENTE {
     BIGINT id_paciente PK
@@ -436,29 +467,20 @@ erDiagram
     BIGINT id_empleado PK
     BIGINT id_persona FK
     CHAR curp
-    DATE fecha_contratacion
     ENUM estado
+  }
+  DOCTOR {
+    BIGINT id_empleado PK, FK
+    VARCHAR cedula_profesional
+    TINYINT publicado
   }
   ASISTENTE {
     BIGINT id_empleado PK, FK
     VARCHAR turno
   }
-  DOCTOR {
-    BIGINT id_empleado PK, FK
-    VARCHAR cedula_profesional
-  }
   ESPECIALIDAD {
     INT id_especialidad PK
     VARCHAR nombre
-    TINYINT activo
-  }
-  DOCTOR_ESPECIALIDAD {
-    BIGINT id_empleado PK, FK
-    INT id_especialidad PK, FK
-  }
-  CONSULTORIO {
-    INT id_consultorio PK
-    VARCHAR codigo
     TINYINT activo
   }
   TIPO_ATENCION {
@@ -467,40 +489,21 @@ erDiagram
     VARCHAR nombre
     SMALLINT duracion_minutos
     DECIMAL costo_base
-  }
-  HORARIO_ATENCION {
-    BIGINT id_horario PK
-    BIGINT id_empleado FK
-    INT id_consultorio FK
-    TINYINT dia_semana
-    TIME hora_inicio
-    TIME hora_fin
-  }
-  BLOQUEO_HORARIO {
-    BIGINT id_bloqueo PK
-    BIGINT id_empleado FK
-    INT id_consultorio FK
-    BIGINT id_usuario_registro FK
-    DATETIME inicio
-    DATETIME fin
+    TINYINT publicado_web
   }
   CITA {
     BIGINT id_cita PK
     BIGINT id_paciente FK
     BIGINT id_empleado FK
-    INT id_consultorio FK
     INT id_tipo_atencion FK
-    BIGINT id_usuario_registro FK
-    BIGINT id_usuario_cancelacion FK
     DATETIME inicio
     DATETIME fin
     ENUM estado
+    ENUM canal_registro
   }
   HISTORIAL_CITA {
     BIGINT id_historial PK
     BIGINT id_cita FK
-    BIGINT id_usuario FK
-    ENUM estado_anterior
     ENUM estado_nuevo
     DATETIME fecha_evento
   }
@@ -509,104 +512,103 @@ erDiagram
     BIGINT id_usuario FK
     CHAR token_hash
     ENUM plataforma
-    DATETIME fecha_expiracion
   }
   TOKEN_RECUPERACION {
     BIGINT id_token PK
     BIGINT id_usuario FK
     CHAR token_hash
     ENUM proposito
-    DATETIME fecha_expiracion
+  }
+  PREGUNTA_SECRETA {
+    SMALLINT id_pregunta_secreta PK
+    VARCHAR texto
+    TINYINT activo
+  }
+  USUARIO_PREGUNTA_SECRETA {
+    BIGINT id_usuario PK, FK
+    SMALLINT id_pregunta_secreta PK, FK
+    VARCHAR respuesta_hash
+  }
+  RESENA {
+    BIGINT id_resena PK
+    BIGINT id_paciente FK
+    VARCHAR nombre_autor
+    TINYINT estrellas
+    TINYINT publicada
+  }
+  CENTRO_MEDICO {
+    TINYINT id_centro PK
+    VARCHAR nombre
+    VARCHAR telefono
+  }
+  HERO_SLIDE {
+    INT id_slide PK
+    VARCHAR titulo
+    SMALLINT orden
+    TINYINT activo
+  }
+  PREGUNTA_FRECUENTE {
+    INT id_pregunta_frecuente PK
+    VARCHAR pregunta
+    SMALLINT orden
   }
   NOTIFICACION {
     BIGINT id_notificacion PK
     BIGINT id_usuario FK
     BIGINT id_cita FK
     ENUM canal
-    ENUM estado_envio
-  }
-  CONTENIDO_INFORMATIVO {
-    BIGINT id_contenido PK
-    BIGINT id_usuario_autor FK
-    VARCHAR slug
-    ENUM estado
-    DATETIME fecha_publicacion
   }
   AUDITORIA {
     BIGINT id_auditoria PK
     BIGINT id_usuario FK
     VARCHAR modulo
     VARCHAR accion
-    ENUM resultado
-    DATETIME fecha_evento
   }
-
-  PERSONA ||--o| USUARIO : tiene
-  PERSONA ||--o| PACIENTE : perfil
-  PERSONA ||--o| EMPLEADO : perfil
-  USUARIO ||--o{ USUARIO_ROL : recibe
-  ROL ||--o{ USUARIO_ROL : asignado
-  ROL ||--o{ ROL_PERMISO : incluye
-  PERMISO ||--o{ ROL_PERMISO : autoriza
-  EMPLEADO ||--o| ASISTENTE : especializa
-  EMPLEADO ||--o| DOCTOR : especializa
-  DOCTOR ||--o{ DOCTOR_ESPECIALIDAD : posee
-  ESPECIALIDAD ||--o{ DOCTOR_ESPECIALIDAD : asignada
-  ESPECIALIDAD o|--o{ TIPO_ATENCION : clasifica
-  DOCTOR ||--o{ HORARIO_ATENCION : programa
-  CONSULTORIO o|--o{ HORARIO_ATENCION : asignado
-  DOCTOR ||--o{ BLOQUEO_HORARIO : bloqueado
-  CONSULTORIO o|--o{ BLOQUEO_HORARIO : afecta
-  USUARIO ||--o{ BLOQUEO_HORARIO : registra
-  PACIENTE ||--o{ CITA : solicita
-  DOCTOR ||--o{ CITA : atiende
-  CONSULTORIO o|--o{ CITA : asignado
-  TIPO_ATENCION ||--o{ CITA : define
-  USUARIO ||--o{ CITA : registra
-  USUARIO o|--o{ CITA : cancela
-  CITA ||--o{ HISTORIAL_CITA : mantiene
-  USUARIO o|--o{ HISTORIAL_CITA : ejecuta
-  USUARIO ||--o{ SESION_USUARIO : inicia
-  USUARIO ||--o{ TOKEN_RECUPERACION : solicita
-  USUARIO ||--o{ NOTIFICACION : recibe
-  CITA o|--o{ NOTIFICACION : relacionada
-  USUARIO o|--o{ CONTENIDO_INFORMATIVO : redacta
-  USUARIO o|--o{ AUDITORIA : genera
 ```
 
 #### Diagrama relacional
 
-Este diagrama explicita las relaciones FK implementadas en el SQL. `PK` identifica clave primaria; `FK` identifica clave foránea. Las tablas puente usan claves primarias compuestas.
+Este diagrama explicita los grupos funcionales y las relaciones foráneas (FK) implementadas en el SQL. `PK` identifica clave primaria; `FK` identifica clave foránea.
 
 ```mermaid
 flowchart TB
-  subgraph Identidad["Identidad y autorización"]
+  subgraph Identidad["Identidad, Seguridad y Domicilios"]
     P["persona<br/>PK id_persona"]
     U["usuario<br/>PK id_usuario<br/>FK id_persona"]
     R["rol<br/>PK id_rol"]
     PER["permiso<br/>PK id_permiso"]
-    UR["usuario_rol<br/>PK/FK id_usuario<br/>PK/FK id_rol"]
-    RP["rol_permiso<br/>PK/FK id_rol<br/>PK/FK id_permiso"]
+    UR["usuario_rol<br/>PK/FK id_usuario, id_rol"]
+    RP["rol_permiso<br/>PK/FK id_rol, id_permiso"]
+    MUN["municipio<br/>PK id_municipio"]
+    DIR["direccion<br/>PK id_direccion<br/>FK id_persona, id_municipio"]
     SU["sesion_usuario<br/>PK id_sesion<br/>FK id_usuario"]
     TR["token_recuperacion<br/>PK id_token<br/>FK id_usuario"]
+    PS["pregunta_secreta<br/>PK id_pregunta_secreta"]
+    UPS["usuario_pregunta_secreta<br/>PK/FK id_usuario, id_pregunta_secreta"]
+
     P -->|usuario.id_persona| U
+    P -->|direccion.id_persona| DIR
+    MUN -->|direccion.id_municipio| DIR
     U -->|usuario_rol.id_usuario| UR
     R -->|usuario_rol.id_rol| UR
     R -->|rol_permiso.id_rol| RP
     PER -->|rol_permiso.id_permiso| RP
     U -->|sesion_usuario.id_usuario| SU
     U -->|token_recuperacion.id_usuario| TR
+    U -->|usuario_pregunta_secreta.id_usuario| UPS
+    PS -->|usuario_pregunta_secreta.id_pregunta_secreta| UPS
   end
 
-  subgraph Perfiles["Perfiles y catálogos"]
+  subgraph Perfiles["Perfiles y Catálogos Clínicos"]
     PA["paciente<br/>PK id_paciente<br/>FK id_persona"]
     E["empleado<br/>PK id_empleado<br/>FK id_persona"]
     A["asistente<br/>PK/FK id_empleado"]
     D["doctor<br/>PK/FK id_empleado"]
     ES["especialidad<br/>PK id_especialidad"]
-    DE["doctor_especialidad<br/>PK/FK id_empleado<br/>PK/FK id_especialidad"]
+    DE["doctor_especialidad<br/>PK/FK id_empleado, id_especialidad"]
     CO["consultorio<br/>PK id_consultorio"]
-    TA["tipo_atencion<br/>PK id_tipo_atencion<br/>FK id_especialidad"]
+    TA["tipo_atencion (Servicios unificados)<br/>PK id_tipo_atencion<br/>FK id_especialidad"]
+
     P -->|paciente.id_persona| PA
     P -->|empleado.id_persona| E
     E -->|asistente.id_empleado| A
@@ -616,30 +618,37 @@ flowchart TB
     ES -->|tipo_atencion.id_especialidad| TA
   end
 
-  subgraph Agenda["Agenda y citas"]
-    H["horario_atencion<br/>PK id_horario<br/>FK id_empleado<br/>FK id_consultorio"]
-    B["bloqueo_horario<br/>PK id_bloqueo<br/>FK id_empleado<br/>FK id_consultorio<br/>FK id_usuario_registro"]
-    C["cita<br/>PK id_cita<br/>FK paciente, doctor<br/>FK consultorio, tipo_atencion<br/>FK usuarios de registro/cancelación"]
-    HC["historial_cita<br/>PK id_historial<br/>FK id_cita<br/>FK id_usuario"]
+  subgraph Agenda["Agenda, Citas y Trazabilidad"]
+    H["horario_atencion<br/>PK id_horario<br/>FK id_empleado, id_consultorio"]
+    B["bloqueo_horario<br/>PK id_bloqueo<br/>FK id_empleado, consultorio, usuario"]
+    C["cita<br/>PK id_cita<br/>FK paciente, doctor, consultorio, tipo_atencion"]
+    HC["historial_cita<br/>PK id_historial<br/>FK id_cita, id_usuario"]
+
     D -->|horario_atencion.id_empleado| H
-    CO -.->|horario_atencion.id_consultorio nullable| H
+    CO -.->|horario_atencion.id_consultorio| H
     D -->|bloqueo_horario.id_empleado| B
-    CO -.->|bloqueo_horario.id_consultorio nullable| B
+    CO -.->|bloqueo_horario.id_consultorio| B
     U -->|bloqueo_horario.id_usuario_registro| B
     PA -->|cita.id_paciente| C
-    D -->|cita.id_empleado| C
-    CO -.->|cita.id_consultorio nullable| C
+    D -->|cita.id_empleado (NOT NULL)| C
+    CO -.->|cita.id_consultorio| C
     TA -->|cita.id_tipo_atencion| C
     U -->|cita.id_usuario_registro| C
-    U -.->|cita.id_usuario_cancelacion nullable| C
+    U -.->|cita.id_usuario_cancelacion| C
     C -->|historial_cita.id_cita| HC
-    U -.->|historial_cita.id_usuario nullable| HC
+    U -.->|historial_cita.id_usuario| HC
   end
 
-  subgraph Comunicacion["Notificaciones, contenido y auditoría"]
-    N["notificacion<br/>PK id_notificacion<br/>FK id_usuario<br/>FK id_cita nullable"]
-    CI["contenido_informativo<br/>PK id_contenido<br/>FK id_usuario_autor nullable"]
-    AU["auditoria<br/>PK id_auditoria<br/>FK id_usuario nullable"]
+  subgraph Portal["Portal Público, Comunicación y Auditoría"]
+    CM["centro_medico<br/>PK id_centro = 1"]
+    HS["hero_slide<br/>PK id_slide"]
+    RES["resena<br/>PK id_resena<br/>FK id_paciente nullable"]
+    FAQ["pregunta_frecuente<br/>PK id_pregunta_frecuente"]
+    N["notificacion<br/>PK id_notificacion<br/>FK usuario, cita"]
+    CI["contenido_informativo<br/>PK id_contenido<br/>FK id_usuario_autor"]
+    AU["auditoria<br/>PK id_auditoria<br/>FK id_usuario"]
+
+    PA -.->|resena.id_paciente nullable| RES
     U -->|notificacion.id_usuario| N
     C -.->|notificacion.id_cita| N
     U -.->|contenido_informativo.id_usuario_autor| CI
@@ -647,44 +656,52 @@ flowchart TB
   end
 ```
 
-**Relaciones en notación relacional (PK / FK):**
+**Relaciones en notación relacional (PK / FK) — 31 tablas:**
 
-| Relación | Clave primaria | Claves foráneas |
+| Tabla | Clave primaria | Claves foráneas e integridad referencial |
 |---|---|---|
 | `persona` | `id_persona` | — |
-| `usuario` | `id_usuario` | `id_persona → persona.id_persona` (única) |
+| `usuario` | `id_usuario` | `id_persona → persona.id_persona` (UQ, RESTRICT) |
 | `rol` | `id_rol` | — |
 | `permiso` | `id_permiso` | — |
-| `usuario_rol` | (`id_usuario`, `id_rol`) | `id_usuario → usuario.id_usuario`; `id_rol → rol.id_rol` |
-| `rol_permiso` | (`id_rol`, `id_permiso`) | `id_rol → rol.id_rol`; `id_permiso → permiso.id_permiso` |
-| `paciente` | `id_paciente` | `id_persona → persona.id_persona` (única) |
-| `empleado` | `id_empleado` | `id_persona → persona.id_persona` (única) |
-| `asistente` | `id_empleado` | `id_empleado → empleado.id_empleado` |
-| `doctor` | `id_empleado` | `id_empleado → empleado.id_empleado` |
+| `usuario_rol` | (`id_usuario`, `id_rol`) | `id_usuario → usuario.id_usuario` (CASCADE); `id_rol → rol.id_rol` (RESTRICT) |
+| `rol_permiso` | (`id_rol`, `id_permiso`) | `id_rol → rol.id_rol` (CASCADE); `id_permiso → permiso.id_permiso` (RESTRICT) |
+| `municipio` | `id_municipio` | — |
+| `direccion` | `id_direccion` | `id_persona → persona.id_persona` (CASCADE); `id_municipio → municipio.id_municipio` (SET NULL) |
+| `paciente` | `id_paciente` | `id_persona → persona.id_persona` (UQ, RESTRICT) |
+| `empleado` | `id_empleado` | `id_persona → persona.id_persona` (UQ, RESTRICT) |
+| `asistente` | `id_empleado` | `id_empleado → empleado.id_empleado` (RESTRICT) |
+| `doctor` | `id_empleado` | `id_empleado → empleado.id_empleado` (RESTRICT) |
 | `especialidad` | `id_especialidad` | — |
-| `doctor_especialidad` | (`id_empleado`, `id_especialidad`) | `id_empleado → doctor.id_empleado`; `id_especialidad → especialidad.id_especialidad` |
+| `doctor_especialidad` | (`id_empleado`, `id_especialidad`) | `id_empleado → doctor.id_empleado` (RESTRICT); `id_especialidad → especialidad.id_especialidad` (RESTRICT) |
 | `consultorio` | `id_consultorio` | — |
-| `tipo_atencion` | `id_tipo_atencion` | `id_especialidad → especialidad.id_especialidad` (nullable) |
-| `horario_atencion` | `id_horario` | `id_empleado → doctor.id_empleado`; `id_consultorio → consultorio.id_consultorio` (nullable) |
-| `bloqueo_horario` | `id_bloqueo` | `id_empleado → doctor.id_empleado`; `id_consultorio → consultorio.id_consultorio` (nullable); `id_usuario_registro → usuario.id_usuario` |
-| `cita` | `id_cita` | `id_paciente → paciente.id_paciente`; `id_empleado → doctor.id_empleado`; `id_consultorio → consultorio.id_consultorio` (nullable); `id_tipo_atencion → tipo_atencion.id_tipo_atencion`; `id_usuario_registro → usuario.id_usuario`; `id_usuario_cancelacion → usuario.id_usuario` (nullable) |
-| `historial_cita` | `id_historial` | `id_cita → cita.id_cita`; `id_usuario → usuario.id_usuario` (nullable) |
-| `sesion_usuario` | `id_sesion` | `id_usuario → usuario.id_usuario` |
-| `token_recuperacion` | `id_token` | `id_usuario → usuario.id_usuario` |
-| `notificacion` | `id_notificacion` | `id_usuario → usuario.id_usuario`; `id_cita → cita.id_cita` (nullable) |
-| `contenido_informativo` | `id_contenido` | `id_usuario_autor → usuario.id_usuario` (nullable) |
-| `auditoria` | `id_auditoria` | `id_usuario → usuario.id_usuario` (nullable) |
+| `tipo_atencion` | `id_tipo_atencion` | `id_especialidad → especialidad.id_especialidad` (nullable, RESTRICT) |
+| `horario_atencion` | `id_horario` | `id_empleado → doctor.id_empleado` (RESTRICT); `id_consultorio → consultorio.id_consultorio` (nullable, RESTRICT) |
+| `bloqueo_horario` | `id_bloqueo` | `id_empleado → doctor.id_empleado` (RESTRICT); `id_consultorio → consultorio.id_consultorio` (nullable, RESTRICT); `id_usuario_registro → usuario.id_usuario` (RESTRICT) |
+| `cita` | `id_cita` | `id_paciente → paciente.id_paciente` (RESTRICT); `id_empleado → doctor.id_empleado` (RESTRICT); `id_consultorio → consultorio.id_consultorio` (nullable, RESTRICT); `id_tipo_atencion → tipo_atencion.id_tipo_atencion` (RESTRICT); `id_usuario_registro → usuario.id_usuario` (RESTRICT); `id_usuario_cancelacion → usuario.id_usuario` (nullable, SET NULL) |
+| `historial_cita` | `id_historial` | `id_cita → cita.id_cita` (RESTRICT); `id_usuario → usuario.id_usuario` (nullable, SET NULL) |
+| `sesion_usuario` | `id_sesion` | `id_usuario → usuario.id_usuario` (RESTRICT) |
+| `token_recuperacion` | `id_token` | `id_usuario → usuario.id_usuario` (RESTRICT) |
+| `pregunta_secreta` | `id_pregunta_secreta` | — |
+| `usuario_pregunta_secreta` | (`id_usuario`, `id_pregunta_secreta`) | `id_usuario → usuario.id_usuario` (CASCADE); `id_pregunta_secreta → pregunta_secreta.id_pregunta_secreta` (RESTRICT) |
+| `notificacion` | `id_notificacion` | `id_usuario → usuario.id_usuario` (RESTRICT); `id_cita → cita.id_cita` (nullable, SET NULL) |
+| `contenido_informativo` | `id_contenido` | `id_usuario_autor → usuario.id_usuario` (nullable, SET NULL) |
+| `auditoria` | `id_auditoria` | `id_usuario → usuario.id_usuario` (nullable, SET NULL) |
+| `centro_medico` | `id_centro` | — (CHECK `id_centro = 1`) |
+| `hero_slide` | `id_slide` | — |
+| `resena` | `id_resena` | `id_paciente → paciente.id_paciente` (nullable, SET NULL) |
+| `pregunta_frecuente` | `id_pregunta_frecuente` | — |
 
-**Observaciones de integridad del modelo:** el perfil de paciente y el de empleado se enlazan a persona, y la cuenta también se enlaza a persona; sin embargo, las FK no obligan a que cada paciente/empleado tenga una cuenta ni a que el rol asignado concuerde con el perfil. La API debe comprobar esa correspondencia y el acceso a citas propias. La lista completa de claves y restricciones está en [`medicdate_multiplataforma.sql`](./medicdate_multiplataforma.sql).
+**Observaciones de integridad del modelo:** El esquema garantiza 3FN al desacoplar domicilios en `direccion`/`municipio`, unificar servicios en `tipo_atencion`, preservar trazabilidad estricta de citas sin borrados accidentales mediante `RESTRICT`, y brindar flexibilidad para preguntas secretas únicas o en set. La definición SQL completa se encuentra en [`medicdate_multiplataforma_v2.sql`](./medicdate_multiplataforma_v2.sql).
 
 ### 6.1 Compatibilidad con el escritorio existente
 
-Se inspeccionaron el proyecto `version1 escritorio/MedicDate`, el dump `copia-estructura-v1.sql` y la documentación de escritorio. El código implementa formularios para pacientes, doctores, asistentes, especialidades, horarios, citas/agendas, perfil del doctor, acceso y reportes. Sus clases DAL consultan directamente tablas y columnas del esquema legado; por tanto, el escritorio **no puede apuntarse sin cambios** a `medicdate_multiplataforma`.
+Se inspeccionaron el proyecto `version1 escritorio/MedicDate`, el dump `copia-estructura-v1.sql` y la documentación de escritorio. El código implementa formularios para pacientes, doctores, asistentes, especialidades, horarios, citas/agendas, perfil del doctor, acceso y reportes. Sus clases DAL consultan directamente tablas y columnas del esquema legado; por tanto, el escritorio **no puede apuntarse sin cambios** a `innegone_bd_medicdate`.
 
 | Contrato usado por el escritorio | Diferencia en el esquema nuevo | Impacto |
 |---|---|---|
-| Esquema `innegone_bd_medic` y consultas directas desde `clsConexion`/DAL | El SQL crea `medicdate_multiplataforma`; el cliente destino debe consumir APIs Laravel | Cambiar solo la cadena de conexión deja la app apuntando a una base que no contiene su contrato de tablas y contraviene la arquitectura objetivo. |
-| `paciente` contiene `nombre`, apellidos, teléfonos, dirección, `id_municipio`, alergias y notas; el modelo C# usa IDs `int` | Los datos personales pasan a `persona` y `paciente` referencia `id_persona`; cambian nombres y no se incluyen dirección/municipio | Se rompen consultas, altas, edición, pantallas y tipos de datos; además, se perdería cobertura de datos de domicilio si no se añade un mapeo. |
+| Esquema `innegone_bd_medic` y consultas directas desde `clsConexion`/DAL | El SQL crea `innegone_bd_medicdate` (versión 2.1); el cliente destino debe consumir APIs Laravel | Cambiar solo la cadena de conexión deja la app apuntando a una base que no contiene su contrato de tablas y contraviene la arquitectura objetivo. |
+| `paciente` contiene `nombre`, apellidos, teléfonos, dirección, `id_municipio`, alergias y notas; el modelo C# usa IDs `int` | Los datos personales pasan a `persona`, `paciente` referencia `id_persona`, y los domicilios se normalizan en `direccion` y `municipio` | Se rompen consultas directas del DAL legado, pantallas y tipos de datos; la nueva API Laravel centraliza la lectura y escritura normalizada de domicilios y pacientes. |
 | `empleado` contiene datos personales, `tipo_empleado`, `estado` e `id_usuario`; `doctor` enlaza por `id_empleado` y usa especialidad principal/consultorio | Se normaliza la persona, el empleado y el usuario; cambia la relación de especialidades y consultorio | Se rompen joins, formularios, filtrado por tipo y persistencia de doctores/asistentes. |
 | `usuario(usuario, contrasena, id_rol, activo)` | `usuario(correo_acceso, password_hash, estado)` más `usuario_rol` | El login, alta de cuentas y autorización deben adaptarse; un cambio de esquema no convierte ni valida contraseñas existentes. |
 | `cita(id_doctor, fecha, hora, duracion, estado, id_registrado_por)` y estados con espacios/mayúsculas | `id_empleado`, `inicio`/`fin`, tipo de atención obligatorio, usuario de registro obligatorio y estados normalizados | Se rompen alta/edición, grillas, filtros y reportes. Deben mapearse duración/fin, estados, usuario responsable y valores históricos. |
@@ -826,6 +843,7 @@ En conversaciones anteriores se solicitaron cotizaciones de tres meses, siete me
 - `guias de desarrollo/Guía de reparto · MedicDate.html`: reparto funcional por integrante, marcado como propuesta para aprobar.
 - `copia-estructura-v1.sql`: dump histórico MySQL/MariaDB proporcionado como base de comparación.
 - [`Sistema_Integral_Gestion_Citas_Medicas_Centro_Medico_Sagrado_Corazon_Diccionario_Datos.md`](./Sistema_Integral_Gestion_Citas_Medicas_Centro_Medico_Sagrado_Corazon_Diccionario_Datos.md): diccionario del esquema propuesto, alineado al DDL.
+- [`Credenciales_Prueba_MedicDate.md`](./Credenciales_Prueba_MedicDate.md): catálogo de credenciales, parámetros del host de pruebas `innegone_bd_medicdate`, endpoints API REST verificados y cuentas por rol funcional.
 - Cotizaciones de tres meses, siete meses e integral: solicitadas previamente, pero sus archivos no están disponibles en esta carpeta y no se pudieron contrastar con las guías.
 - `documentos de apoyo/MEDICDATE-escritorio/version1 escritorio/MedicDate`: código fuente de escritorio inspeccionado para identificar tecnologías, módulos y contratos SQL.
 - `documentos de apoyo/MEDICDATE-escritorio/--Documentacion escritorio--Tecnicas para identificar problemas - Equipo 6 - 2.docx`: contexto, problema, requisitos y metodología documentados para la primera versión.

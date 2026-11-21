@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedicDate web | Reparto interactivo</title>
+<style>
+:root{--azul:#0B5FA5;--azul-claro:#CFE1F4;--fondo:#E6EDF5;--sup:#F1F5FA;--campo:#F7FAFD;--texto:#191C1F;--suave:#43494F;--borde:#6F7983;--linea:#C3CDD8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--texto);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:24px 16px 56px}
+h1{font-size:24px;margin:0 0 4px}
+.sub{color:var(--suave);margin:0 0 20px}
+.panel{background:var(--sup);border:1px solid var(--linea);border-radius:14px;padding:16px;margin-bottom:16px}
+.bars{display:grid;gap:10px}
+.barrow{display:grid;grid-template-columns:96px 1fr 120px;gap:10px;align-items:center;cursor:pointer;border:0;background:none;text-align:left;font:inherit;color:inherit;padding:4px;border-radius:8px}
+.barrow:hover,.barrow.on{background:var(--azul-claro)}
+.barrow:focus-visible,.chip:focus-visible,button:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--azul);outline-offset:2px}
+.track{height:16px;background:var(--campo);border:1px solid var(--linea);border-radius:8px;overflow:hidden}
+.fill{height:100%;transition:width .25s}
+.meta{font-size:13px;color:var(--suave);text-align:right}
+.note{font-size:13px;color:var(--suave);margin-top:10px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.chip{border:1px solid var(--borde);background:var(--campo);color:var(--texto);border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--azul);border-color:var(--azul);color:#fff}
+.spacer{flex:1}
+.reset{border:1px solid var(--borde);background:transparent;color:var(--suave);border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
+.reset:hover{background:var(--alta,#DCE6F1)}
+h2{font-size:18px;margin:22px 0 8px;display:flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+details.mod{background:var(--sup);border:1px solid var(--linea);border-left-width:6px;border-radius:12px;margin-bottom:10px}
+details.mod>summary{list-style:none;cursor:pointer;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
+details.mod>summary::-webkit-details-marker{display:none}
+.nm{font-weight:600}
+.tag{font-size:12px;color:var(--suave)}
+.pts{background:var(--azul-claro);border-radius:999px;padding:2px 10px;font-size:13px;font-weight:600;white-space:nowrap}
+.mini{grid-column:1/-1;height:6px;background:var(--campo);border-radius:3px;overflow:hidden;border:1px solid var(--linea)}
+.mini>div{height:100%;background:var(--azul);transition:width .2s}
+.body{padding:2px 14px 14px;border-top:1px solid var(--linea)}
+.task{display:flex;gap:10px;align-items:flex-start;padding:7px 0;cursor:pointer}
+.task input{margin-top:4px;width:18px;height:18px;accent-color:var(--azul);flex:none}
+.task.done span{color:var(--suave);text-decoration:line-through}
+.row2{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-top:10px;font-size:13px;color:var(--suave)}
+code{background:var(--campo);border:1px solid var(--linea);border-radius:6px;padding:1px 6px;font-size:12px;color:var(--texto)}
+select{font:inherit;background:var(--campo);border:1px solid var(--borde);border-radius:8px;padding:4px 8px;color:var(--texto)}
+.gal-t{margin:6px 0}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:14px}
+.vcard{border:1px solid var(--linea);background:var(--sup);border-radius:12px;padding:0;overflow:hidden;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.vcard:hover{border-color:var(--azul);box-shadow:0 2px 10px rgba(11,95,165,.18)}
+.shot{position:relative;width:100%;aspect-ratio:16/10;overflow:hidden;background:#fff;border-bottom:1px solid var(--linea)}
+.shot iframe{position:absolute;left:0;top:0;width:1280px;height:800px;border:0;transform-origin:0 0;pointer-events:none}
+.cap{padding:8px 10px;font-size:13px}
+.badge{font-size:11px;font-weight:600;border-radius:6px;padding:1px 8px}
+.badge.pub{background:#D7ECD9;color:#1B5E20}.badge.priv{background:var(--azul-claro);color:#08407A}
+#visor{position:fixed;inset:0;background:rgba(25,28,31,.65);display:none;z-index:50;padding:16px}
+#visor.on{display:flex;flex-direction:column}
+#visor .top{display:flex;gap:10px;align-items:center;background:var(--sup);border-radius:12px 12px 0 0;padding:10px 14px}
+#visor iframe{flex:1;border:0;background:#fff;border-radius:0 0 12px 12px;width:100%}
+.deps li{margin:4px 0}
+@media(max-width:560px){.barrow{grid-template-columns:76px 1fr}.meta{grid-column:1/-1;text-align:left}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MedicDate web | Reparto interactivo</h1>
+  <p class="sub">Cada integrante lleva módulos completos: página pública, pantalla privada con CRUD, API y tablas. Marca tareas, cambia de dueño un módulo y mira cómo se reparte la carga.</p>
+
+  <div class="panel">
+    <div class="bars" id="bars" role="group" aria-label="Carga por integrante"></div>
+    <div class="note" id="balance"></div>
+  </div>
+
+  <div class="toolbar">
+    <div id="filtros" role="group" aria-label="Filtrar por integrante" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    <span class="spacer"></span>
+    <button class="reset" id="reset" type="button">Restablecer reparto</button>
+  </div>
+
+  <div id="lista"></div>
+
+  <div class="panel" style="margin-top:22px">
+    <strong>Orden de trabajo</strong>
+    <ol class="deps">
+      <li><b>Fase 1, todos:</b> crear la BD con el script v2 y subir la estructura base. Ronaldo entrega plantilla, conexión y guardias por perfil.</li>
+      <li><b>Fase 2, en paralelo:</b> Ronaldo hace login, recuperar y Usuarios. Leslie empieza por Especialidades (Monserrat las necesita). Arturo carga datos de ejemplo y arma la Agenda del asistente.</li>
+      <li><b>Fase 3, en paralelo:</b> Monserrat hace Médicos, Servicios y Consejos. Leslie sigue con Reseñas, Preguntas frecuentes, Quiénes somos y Aviso. Arturo hace el panel del médico. Ronaldo hace Inicio con el carrusel y Leslie cierra con el Panel general.</li>
+      <li><b>Fase 4, todos:</b> Inicio y el Panel general leen lo que publican los demás, así que se prueban al final con todo cargado; luego se revisa cada perfil de principio a fin.</li>
+    </ol>
+  </div>
+</div>
+
+<div id="visor" role="dialog" aria-label="Vista"><div class="top"><b id="vt"></b> <code id="vr"></code><span class="spacer"></span><button class="chip" id="vc" type="button">Cerrar</button></div><iframe id="vf" title="Vista abierta"></iframe></div>
+<script>
+var PERSONAS = {
+  Ronaldo:{color:'#0B5FA5'}, Leslie:{color:'#2E7D32'}, Monserrat:{color:'#B45309'}, Arturo:{color:'#6D4AA8'}
+};
+var NOMBRES = Object.keys(PERSONAS);
+var MODS = [
+ {id:'base',n:'Base y guardias por perfil',p:4,o:'Ronaldo',a:'Todos',t:['auditoria','rol','usuario_rol'],k:['Estructura de carpetas y conexión a la BD','Plantilla pública (menú y pie)','Plantilla privada por perfil','Guardias de acceso por rol','Registro de acciones en auditoría']},
+ {id:'acceso',n:'Acceso: login, recuperar y Mi cuenta',p:6,o:'Ronaldo',a:'Todos',t:['usuario','usuario_pregunta_secreta','pregunta_secreta','token_recuperacion'],k:['Login','Recuperar por pregunta secreta','Bloqueo tras 3 intentos fallidos','Mi cuenta: cambiar contraseña','Mi cuenta: elegir pregunta secreta','Cambio obligatorio de clave temporal']},
+ {id:'usuarios',n:'Usuarios del personal',p:5,o:'Ronaldo',a:'Administrador',t:['persona','usuario','usuario_rol','empleado','doctor','asistente'],k:['Lista con búsqueda','Alta (persona, usuario, rol y empleado)','Edición','Activar o desactivar','Baja con reglas: no a uno mismo ni al último administrador activo']},
+ {id:'inicio',n:'Inicio y carrusel',p:6,o:'Ronaldo',a:'Público y administrador',t:['hero_slide','servicio','doctor','horario_atencion','resena','centro_medico'],k:['Carrusel público','Secciones de servicios, médicos y horarios','Reseñas y ubicación','CRUD carrusel: alta y edición','CRUD carrusel: orden, activar y baja','Máximo 6 slides y límites de caracteres']},
+ {id:'especialidades',n:'Especialidades',p:5,o:'Leslie',a:'Público y administrador',t:['especialidad'],k:['Lista pública','Detalle público','Alta y edición','Activar o desactivar','No borrar una especialidad con médicos asignados']},
+ {id:'resenas',n:'Reseñas',p:3,o:'Leslie',a:'Administrador',t:['resena'],k:['Alta y edición','Publicar u ocultar','Baja']},
+ {id:'nosotros',n:'Quiénes somos y datos del centro',p:2,o:'Leslie',a:'Público y administrador',t:['centro_medico'],k:['Página pública (misión, visión, valores)','Formulario de datos del centro']},
+ {id:'faq',n:'Preguntas frecuentes',p:4,o:'Leslie',a:'Público y administrador',t:['pregunta_frecuente'],k:['Página pública','Alta y edición','Orden de las preguntas','Activar, desactivar y baja']},
+ {id:'aviso',n:'Aviso de privacidad',p:2,o:'Leslie',a:'Público y administrador',t:['contenido_informativo'],k:['Página pública','Formulario para editarlo']},
+ {id:'panel',n:'Panel general',p:3,o:'Leslie',a:'Administrador',t:['cita','paciente','usuario'],k:['Citas por estado','Pacientes y personal','Contenido publicado']},
+ {id:'medicos',n:'Médicos',p:7,o:'Monserrat',a:'Público y administrador',t:['doctor','empleado','persona','doctor_especialidad','horario_atencion'],k:['Directorio con filtro por especialidad','Perfil público (descripción, días y horario)','Alta y edición','Publicar u ocultar','Asignar especialidades','Capturar horarios semanales','Baja protegida: con citas solo se desactiva']},
+ {id:'servicios',n:'Servicios',p:5,o:'Monserrat',a:'Público y administrador',t:['servicio'],k:['Lista pública','Detalle público','Alta y edición','Orden, activar o desactivar','Baja']},
+ {id:'consejos',n:'Consejos y noticias',p:6,o:'Monserrat',a:'Público y administrador',t:['contenido_informativo'],k:['Lista con filtro por tipo','Detalle público','Alta y edición','Estados: borrador, publicado y archivado','Resumen y fecha de publicación','Baja']},
+ {id:'agenda',n:'Agenda general',p:4,o:'Arturo',a:'Asistente',t:['cita','paciente','persona','doctor','tipo_atencion'],k:['Citas de todos los médicos','Filtros por día, médico y estado','Detalle sin notas del médico','Solo lectura: validar que no cree ni acepte citas']},
+ {id:'pacientes',n:'Pacientes',p:3,o:'Arturo',a:'Asistente',t:['paciente','persona','cita'],k:['Lista con búsqueda','Ficha con sus citas','Solo lectura']},
+ {id:'resumen',n:'Resumen del médico',p:3,o:'Arturo',a:'Médico',t:['cita'],k:['Citas de hoy y próxima cita','Pendientes y totales del mes','Solo sus propias citas']},
+ {id:'miagenda',n:'Mi agenda',p:4,o:'Arturo',a:'Médico',t:['cita','historial_cita'],k:['Citas por día o semana','Detalle de la cita','Notas internas','Marcar atendida desde la fecha de la cita y guardar en historial']},
+ {id:'mispac',n:'Mis pacientes',p:4,o:'Arturo',a:'Médico',t:['paciente','persona','cita'],k:['Lista de pacientes atendidos','Historial de citas','Notas y alergias']}
+];
+var VISTAS = {
+ base:[['Pública','/','Plantilla pública: menú y pie',''],['Privada','/admin/panel','Plantilla privada: menú lateral por perfil','admin']],
+ acceso:[['Pública','/login','Iniciar sesión',''],['Pública','/recuperar','Recuperar contraseña',''],['Privada','/admin/cuenta','Mi cuenta: clave y pregunta secreta','admin']],
+ usuarios:[['Privada','/admin/usuarios','Usuarios del personal (lista y formulario)','admin']],
+ inicio:[['Pública','/','Inicio: carrusel, servicios, médicos, horarios, reseñas y ubicación',''],['Privada','/admin/hero','Carrusel (lista y formulario)','admin']],
+ especialidades:[['Pública','/especialidades','Lista de especialidades',''],['Pública','/especialidad/1','Detalle de especialidad',''],['Privada','/admin/especialidades','Especialidades (lista y formulario)','admin']],
+ resenas:[['Privada','/admin/resenas','Reseñas (lista y formulario)','admin']],
+ nosotros:[['Pública','/quienes-somos','Quiénes somos',''],['Privada','/admin/centro','Datos del centro','admin']],
+ faq:[['Pública','/preguntas','Preguntas frecuentes',''],['Privada','/admin/preguntas','Preguntas frecuentes (lista y formulario)','admin']],
+ aviso:[['Pública','/aviso','Aviso de privacidad',''],['Privada','/admin/aviso','Editar aviso de privacidad','admin']],
+ panel:[['Privada','/admin/panel','Panel general del administrador','admin']],
+ medicos:[['Pública','/medicos','Directorio de médicos',''],['Pública','/medico/1','Perfil del médico',''],['Privada','/admin/medicos','Médicos (lista y formulario)','admin']],
+ servicios:[['Pública','/servicios','Lista de servicios',''],['Pública','/servicio/1','Detalle de servicio',''],['Privada','/admin/servicios','Servicios (lista y formulario)','admin']],
+ consejos:[['Pública','/consejos','Consejos y noticias',''],['Pública','/consejo/1','Detalle de consejo o noticia',''],['Privada','/admin/consejos','Consejos y noticias (lista y formulario)','admin']],
+ agenda:[['Privada','/asistente/agenda','Agenda general del asistente','asistente']],
+ pacientes:[['Privada','/asistente/pacientes','Pacientes del asistente','asistente']],
+ resumen:[['Privada','/doctor/inicio','Resumen del médico','medico']],
+ miagenda:[['Privada','/doctor/agenda','Mi agenda del médico','medico']],
+ mispac:[['Privada','/doctor/pacientes','Mis pacientes del médico','medico']]
+};
+function srcVista(v){return 'flujo.html'+(v[3]?'?as='+v[3]:'')+'#'+v[1]}
+var KEY='medicdateReparto1';
+var estado={owners:{},done:{}}, filtro='Ronaldo';
+try{var g=localStorage.getItem(KEY);if(g){estado=JSON.parse(g)}}catch(e){}
+estado.owners=estado.owners||{};estado.done=estado.done||{};
+function save(){try{localStorage.setItem(KEY,JSON.stringify(estado))}catch(e){}}
+function dueno(m){return estado.owners[m.id]||m.o}
+function hechas(m){var c=0;m.k.forEach(function(_,i){if(estado.done[m.id+'.'+i])c++});return c}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+var abiertos={};
+
+function barras(){
+  var tot={},hec={},all={};
+  NOMBRES.forEach(function(n){tot[n]=0;hec[n]=0;all[n]=0});
+  MODS.forEach(function(m){var d=dueno(m);tot[d]+=m.p;hec[d]+=hechas(m);all[d]+=m.k.length});
+  var max=Math.max.apply(null,NOMBRES.map(function(n){return tot[n]}))||1;
+  var h='';
+  NOMBRES.forEach(function(n){
+    var pct=all[n]?Math.round(hec[n]*100/all[n]):0;
+    h+='<button type="button" class="barrow'+(filtro===n?' on':'')+'" data-p="'+n+'" aria-label="'+n+': '+tot[n]+' puntos, '+pct+'% hecho"><b>'+n+'</b><div class="track"><div class="fill" style="width:'+(tot[n]*100/max)+'%;background:'+PERSONAS[n].color+'"></div></div><div class="meta">'+tot[n]+' pts · '+pct+'% hecho</div></button>';
+  });
+  document.getElementById('bars').innerHTML=h;
+  var vals=NOMBRES.map(function(n){return tot[n]});
+  var dif=Math.max.apply(null,vals)-Math.min.apply(null,vals);
+  document.getElementById('balance').textContent='Total: '+vals.reduce(function(a,b){return a+b},0)+' puntos. Diferencia entre la carga mayor y la menor: '+dif+(dif<=3?' (parejo).':' (conviene mover algún módulo).');
+}
+function filtros(){
+  var h='';['Todos'].concat(NOMBRES).forEach(function(n){h+='<button type="button" class="chip" data-f="'+n+'" aria-pressed="'+(filtro===n)+'">'+n+'</button>'});
+  document.getElementById('filtros').innerHTML=h;
+}
+function lista(){
+  var h='';
+  NOMBRES.forEach(function(n){
+    if(filtro!=='Todos'&&filtro!==n)return;
+    var ms=MODS.filter(function(m){return dueno(m)===n});
+    var pts=ms.reduce(function(a,m){return a+m.p},0);
+    h+='<h2><span class="dot" style="background:'+PERSONAS[n].color+'"></span>'+n+' <span class="tag">'+pts+' puntos · '+ms.length+' módulos</span></h2>';
+    if(!ms.length)h+='<div class="tag">Sin módulos asignados.</div>';
+    var vs=[];ms.forEach(function(m){(VISTAS[m.id]||[]).forEach(function(v){vs.push([v,m])})});
+    if(vs.length){
+      var np=vs.filter(function(x){return x[0][0]==='Pública'}).length;
+      h+='<div class="gal-t"><b>Vistas que hace '+n+': '+vs.length+'</b> <span class="tag">('+np+' públicas, '+(vs.length-np)+' privadas). Toca una para abrirla y navegarla.</span></div><div class="gal">'+vs.map(function(x,i){var v=x[0];return '<button type="button" class="vcard" data-v="'+encodeURIComponent(JSON.stringify(v))+'"><div class="shot" data-src="'+srcVista(v)+'"><iframe tabindex="-1" aria-hidden="true" title="'+esc(v[2])+'"></iframe></div><div class="cap"><span class="badge '+(v[0]==='Pública'?'pub':'priv')+'">'+v[0]+'</span> <code>'+esc(v[1])+'</code><div>'+esc(v[2])+'</div></div></button>'}).join('')+'</div>';
+    }
+    ms.forEach(function(m){
+      var c=hechas(m),tot=m.k.length;
+      h+='<details class="mod" data-m="'+m.id+'" style="border-left-color:'+PERSONAS[n].color+'"'+(abiertos[m.id]?' open':'')+'><summary><span><span class="nm">'+esc(m.n)+'</span> <span class="tag">· '+esc(m.a)+' · '+c+'/'+tot+'</span></span><span class="pts">'+m.p+' pts</span><div class="mini"><div style="width:'+(c*100/tot)+'%"></div></div></summary><div class="body">';
+      m.k.forEach(function(t,i){
+        var d=estado.done[m.id+'.'+i];
+        h+='<label class="task'+(d?' done':'')+'"><input type="checkbox" data-t="'+m.id+'.'+i+'"'+(d?' checked':'')+'><span>'+esc(t)+'</span></label>';
+      });
+      h+='<div class="row2"><span>Tablas: '+m.t.map(function(x){return '<code>'+x+'</code>'}).join(' ')+'</span></div>';
+      h+='<div class="row2"><label>Dueño: <select data-o="'+m.id+'" aria-label="Dueño de '+esc(m.n)+'">'+NOMBRES.map(function(x){return '<option'+(x===n?' selected':'')+'>'+x+'</option>'}).join('')+'</select></label></div>';
+      h+='</div></details>';
+    });
+  });
+  document.getElementById('lista').innerHTML=h;
+}
+function todo(){barras();filtros();lista()}
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-p]');if(b){filtro=(filtro===b.getAttribute('data-p'))?'Todos':b.getAttribute('data-p');todo();return}
+  var f=e.target.closest('[data-f]');if(f){filtro=f.getAttribute('data-f');todo();return}
+});
+document.addEventListener('change',function(e){
+  var t=e.target.getAttribute&&e.target.getAttribute('data-t');
+  if(t){estado.done[t]=e.target.checked;save();todo();return}
+  var o=e.target.getAttribute&&e.target.getAttribute('data-o');
+  if(o){estado.owners[o]=e.target.value;save();todo()}
+});
+document.addEventListener('toggle',function(e){var m=e.target.getAttribute&&e.target.getAttribute('data-m');if(m)abiertos[m]=e.target.open},true);
+document.getElementById('reset').addEventListener('click',function(){
+  if(!this.dataset.sure){this.dataset.sure='1';this.textContent='Toca de nuevo para confirmar';var s=this;setTimeout(function(){delete s.dataset.sure;s.textContent='Restablecer reparto'},3000);return}
+  estado={owners:{},done:{}};save();filtro='Todos';delete this.dataset.sure;this.textContent='Restablecer reparto';todo();
+});
+todo();
+
+function escalar(){
+  document.querySelectorAll('.shot').forEach(function(b){
+    var f=b.firstChild;f.style.transform='scale('+(b.clientWidth/1280)+')';
+    if(!f.getAttribute('src')&&b.clientWidth>0){f.setAttribute('src',b.getAttribute('data-src'))}
+  });
+}
+var _todo=todo;todo=function(){_todo();escalar()};
+window.addEventListener('resize',escalar);
+document.addEventListener('click',function(e){
+  var c=e.target.closest('.vcard');
+  if(c){var v=JSON.parse(decodeURIComponent(c.getAttribute('data-v')));
+    document.getElementById('vt').textContent=v[2];document.getElementById('vr').textContent=v[1];
+    document.getElementById('vf').src=srcVista(v);document.getElementById('visor').classList.add('on');return}
+  if(e.target.id==='vc'){document.getElementById('visor').classList.remove('on');document.getElementById('vf').removeAttribute('src')}
+});
+escalar();
+</script>
+</body>
+</html>
