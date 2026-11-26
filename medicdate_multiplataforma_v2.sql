@@ -569,6 +569,14 @@ CREATE TABLE IF NOT EXISTS `contenido_informativo` (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+CREATE TABLE IF NOT EXISTS `aviso_legal` (
+  `id_aviso` TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  `texto` TEXT NOT NULL,
+  `fecha_actualizacion` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_aviso`),
+  CONSTRAINT `chk_aviso_unico` CHECK (`id_aviso` = 1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 -- =====================================================================
 -- 8. CARGA INICIAL DE CATALOGOS ESTRUCTURALES Y SEMILLAS
 -- =====================================================================
