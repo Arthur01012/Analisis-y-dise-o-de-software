@@ -32,27 +32,29 @@ graph TD
 ### 3.1 Vistas y Pantallas (`com.example.medicdate.Vista`)
 
 #### 1. [`RecervarCitaActivity.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Vista/RecervarCitaActivity.kt)
-- **Responsabilidad**: Interfaz gráfica para la selección de fecha y hora.
+- **Responsabilidad**: Interfaz gráfica para la selección de fecha y hora. Implementa explícitamente `View.OnClickListener`, `OnApplyWindowInsetsListener`, `RadioGroup.OnCheckedChangeListener`, `WeekSwipeLayout.OnDateChangeListener`, `WeekSwipeLayout.OnWeekSwipeListener` y `OnHorarioSeleccionadoListener` (sin lambdas).
 - **Elementos UI**:
   - Encabezado dinámico con iniciales, nombre y especialidad del doctor.
   - Conmutador de tipo de atención (*Primera consulta - 30 min* / *Seguimiento - 20 min*) con actualización dinámica de bordes (`bg_option_selected` / `bg_option_default`).
-  - Navegador semanal interactivo (`WeekSwipeLayout`) con botones anterior/siguiente y gestos táctiles (*swipe*).
+  - Navegador semanal interactivo (`WeekSwipeLayout`) con botones anterior/siguiente y gestos táctiles (*swipe*). Al recibir `dias_atencion`, reenfoca automáticamente al primer día hábil futuro del médico y recarga la disponibilidad de esa fecha.
   - Cargador esqueleto animado (*Skeleton Shadow Load*) que se pulsa mientras se consulta la API.
-  - Cuadrícula independiente de horarios (`rvHorarios` con `GridLayoutManager`) con scroll aislado.
-  - Barra de resumen inferior con botón de acción **"Continuar"**.
+  - Cuadrícula independiente de horarios (`rvHorarios` con `GridLayoutManager` y `HorarioAdapter : View.OnClickListener`) que muestra tachados y deshabilitados los horarios ocupados o bloqueados por `bloqueo_horario`.
+  - Barra de resumen inferior con botón de acción **"Continuar"** que envía los datos a `ConfirmarCitaActivity` mediante constantes `EXTRA_*` definidas en `companion object`.
 
 #### 2. [`ConfirmarCitaActivity.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Vista/ConfirmarCitaActivity.kt)
-- **Responsabilidad**: Resumen pre-reserva de la cita.
-- **Funcionalidad**: Valida la sesión activa del usuario vía `SessionManager`. Muestra el desglose del doctor, tipo de atención, fecha/hora formateada (*ej. "Lunes 23 de noviembre de 2026 · 16:30"*) y consultorio. Al presionar **"Confirmar cita"**, invoca la transacción final.
+- **Responsabilidad**: Resumen pre-reserva de la cita. Implementa `View.OnClickListener` y `OnApplyWindowInsetsListener` (sin lambdas) y define sus constantes `EXTRA_*` en `companion object`.
+- **Funcionalidad**: Valida la sesión activa del usuario vía `SessionManager`. Muestra el desglose del doctor, especialidad y tipo de atención, fecha/hora formateada (*ej. "Jueves 26 de noviembre de 2026 · 10:30"*) y consultorio. Al presionar **"Confirmar cita"**, invoca la transacción final.
+- **Notificación de solapamiento / horario bloqueado**: Si el backend responde con conflicto (`HTTP 409`, `accion = "elegir_otro_horario"`, o códigos `MEDICO_OCUPADO`, `PACIENTE_OCUPADO`, `CONSULTORIO_OCUPADO`, `AGENDA_BLOQUEADA`, `HORARIO_NO_DISPONIBLE`, `CONSULTORIO_NO_DISPONIBLE`, `AGENDA_ACTUALIZADA`), muestra el banner `conflict_message` con la primera oración resaltada en negritas y reemplaza las acciones por el botón principal **"Elegir otro horario"** para regresar y refrescar disponibilidad.
 
 #### 3. [`CitaConfirmadaActivity.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Vista/CitaConfirmadaActivity.kt)
-- **Responsabilidad**: Pantalla de éxito post-reserva.
-- **Funcionalidad**: Despliega la confirmación con el número de ticket (`#id_cita`), fecha/hora y botones de retorno a las actividades del sistema.
+- **Responsabilidad**: Pantalla de éxito post-reserva. Implementa `View.OnClickListener` y `OnApplyWindowInsetsListener` (sin lambdas) y recibe sus datos mediante constantes `EXTRA_*` en `companion object`.
+- **Funcionalidad**: Despliega la confirmación con especialidad, médico, fecha/hora, consultorio y número de ticket (`#id_cita`), además de botones de retorno.
 
 #### 4. Componente UI Personalizado: [`WeekSwipeLayout.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/UI/WeekSwipeLayout.kt)
-- **Filtro por Días de Atención**: Deshabilita (`alpha = 0.35f`, `isEnabled = false`) los días en los que el médico no tiene registrada agenda.
+- **Filtro por Días de Atención**: Mantiene los días deshabilitados mientras cargan los `dias_atencion` del médico y bloquea (`alpha = 0.35f`, `isEnabled = false`, `isClickable = false`, sin listener) todo día en el que el médico no tiene agenda activa.
 - **Filtro de Fechas Pasadas**: Bloquea cualquier selección de fecha menor o igual a hoy (`fecha <= CURDATE()`).
-- **Enfoque Automático**: Selecciona y sincroniza el calendario al primer día hábil futuro disponible.
+- **Enfoque Automático**: Alinea la semana al lunes independientemente de la configuración regional y mueve la selección al primer día hábil futuro disponible del médico.
+- **Eventos sin lambdas**: Implementa `View.OnClickListener` y expone las interfaces `OnDateChangeListener` y `OnWeekSwipeListener`.
 
 ---
 
@@ -60,8 +62,8 @@ graph TD
 
 | Presentador | Métodos Clave | Descripción |
 | :--- | :--- | :--- |
-| [`clsPresentadorReservaCita.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Presentador/clsPresentadorReservaCita.kt) | `cargarDisponibilidad(idEmpleado, idTipoAtencion, fecha, idUsuario)` | Ejecuta la consulta de disponibilidad en una Coroutine (`Dispatchers.Main`) y notifica a la vista (`mostrarHorarios` o `mostrarError`). |
-| [`clsPresentadorConfirmarCita.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Presentador/clsPresentadorConfirmarCita.kt) | `reservarCita(request)` | Procesa la petición de reserva final. Al recibir confirmación exitosa (`exito = true`), invoca `vista.irAConfirmada(idCita)`. |
+| [`clsPresentadorReservaCita.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Presentador/clsPresentadorReservaCita.kt) | `cargarDisponibilidad(idEmpleado, idTipoAtencion, fecha, idUsuario)`, `cancelarSolicitudes()` | Ejecuta la consulta de disponibilidad mediante `Call`/`Callback` de Retrofit (GET con fallback POST), cancela peticiones previas en vuelo y notifica a la vista (`mostrarHorarios` o `mostrarError`). |
+| [`clsPresentadorConfirmarCita.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Presentador/clsPresentadorConfirmarCita.kt) | `reservarCita(request)`, `cancelarSolicitudes()` | Procesa la petición de reserva mediante `Call`/`Callback`. En éxito invoca `vista.irAConfirmada(idCita, consultorio)`; ante conflicto de solapamiento o bloqueo invoca `vista.mostrarConflictoHorario(mensaje)`. |
 | [`clsPresentadorCitaConfirmada.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Presentador/clsPresentadorCitaConfirmada.kt) | `mostrarCita(idCita)` | Gestiona el renderizado de los detalles del ticket de confirmación. |
 
 ---
@@ -69,8 +71,8 @@ graph TD
 ### 3.3 Modelos de Lógica y Clases de Datos (`com.example.medicdate.Modelo`)
 
 #### Clases de Lógica de Negocio:
-- [`clsDisponibilidadModelo.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Modelo/clsDisponibilidadModelo.kt): Realiza la petición a la API `disponibilidad.php`. Captura respuestas de error HTTP (422, 409, 400) y extrae el JSON descriptivo enviado por el backend.
-- [`clsReservaCitaModelo.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Modelo/clsReservaCitaModelo.kt): Ejecuta la petición `POST` hacia `reservar_cita.php`.
+- [`clsDisponibilidadModelo.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Modelo/clsDisponibilidadModelo.kt): Construye las llamadas `Call<DisponibilidadResponse>` hacia `disponibilidad.php` (GET con parámetro `datos` y fallback POST) y parsea cuerpos de error HTTP (422, 409, 400).
+- [`clsReservaCitaModelo.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Modelo/clsReservaCitaModelo.kt): Construye la llamada `Call<ReservaResponse>` hacia `reservar_cita.php` y parsea errores estructurados del backend.
 
 #### Archivos de Datos Serializables:
 - [`dataDisponibilidad.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Modelo/dataDisponibilidad.kt):
@@ -78,10 +80,10 @@ graph TD
   - `DisponibilidadResponse`: Retorna `exito`, `mensaje`, `medico`, `tipo_atencion`, `duracion_minutos`, `dias_atencion` y la lista de `horarios`.
 - [`dataReserva.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Modelo/dataReserva.kt):
   - `ReservaRequest`: Encapsula `id_usuario`, `id_empleado`, `id_tipo_atencion`, `inicio` e `id_consultorio`.
-  - `ReservaResponse`: Retorna `exito`, `codigo`, `mensaje`, `id_cita` y el objeto `cita`.
+  - `ReservaResponse`: Retorna `exito`, `codigo`, `mensaje`, `accion`, `id_cita` y el objeto `cita`.
   - `CitaDetalleReserva`: Estructura detallada del ticket de cita.
 - [`Horario.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Modelo/Horario.kt):
-  - `Horario`: Representa un slot individual con `inicio`, `fin`, `hora`, `consultorio` y el indicador booleano `disponible`.
+  - `Horario`: Representa un slot individual con `inicio`, `fin`, `hora`, `id_consultorio`, `consultorio`, `disponible`, `bloqueado`, `codigo` y `mensaje`.
 
 ---
 
@@ -212,3 +214,6 @@ sequenceDiagram
 
 4. **Persistencia de Sesión**:
    Uso de [`SessionManager.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Util/SessionManager.kt) con `SharedPreferences` para preservar `usuarioId` y `pacienteId`, garantizando que la reserva se procese con la cuenta autenticada.
+
+5. **Validación Completa de Bloqueo de Horarios (`bloqueo_horario`)**:
+   Tanto `disponibilidad.php` como `reservar_cita.php` (vía `citasApiBuscarConflicto` en `citas_api.php`) evalúan intersección de intervalos completos fecha-hora (`inicio < fin_slot AND fin > inicio_slot`) para soportar bloqueos parciales, de día completo y multidía por médico o por consultorio, devolviendo código `AGENDA_BLOQUEADA` cuando aplica.
