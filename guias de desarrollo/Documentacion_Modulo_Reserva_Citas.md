@@ -32,7 +32,7 @@ graph TD
 ### 3.1 Vistas y Pantallas (`com.example.medicdate.Vista`)
 
 #### 1. [`RecervarCitaActivity.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Vista/RecervarCitaActivity.kt)
-- **Responsabilidad**: Interfaz gráfica para la selección de fecha y hora. Implementa explícitamente `View.OnClickListener`, `OnApplyWindowInsetsListener`, `RadioGroup.OnCheckedChangeListener`, `WeekSwipeLayout.OnDateChangeListener`, `WeekSwipeLayout.OnWeekSwipeListener` y `OnHorarioSeleccionadoListener` (sin lambdas).
+- **Responsabilidad**: Interfaz gráfica para la selección de fecha y hora. Implementa explícitamente `View.OnClickListener`, `RadioGroup.OnCheckedChangeListener`, `WeekSwipeLayout.OnDateChangeListener` y `WeekSwipeLayout.OnWeekSwipeListener`, conservando la estructura por defecto de `onCreate` con `ViewCompat.setOnApplyWindowInsetsListener`.
 - **Elementos UI**:
   - Encabezado dinámico con iniciales, nombre y especialidad del doctor.
   - Conmutador de tipo de atención (*Primera consulta - 30 min* / *Seguimiento - 20 min*) con actualización dinámica de bordes (`bg_option_selected` / `bg_option_default`).
@@ -42,12 +42,12 @@ graph TD
   - Barra de resumen inferior con botón de acción **"Continuar"** que envía los datos a `ConfirmarCitaActivity` mediante constantes `EXTRA_*` definidas en `companion object`.
 
 #### 2. [`ConfirmarCitaActivity.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Vista/ConfirmarCitaActivity.kt)
-- **Responsabilidad**: Resumen pre-reserva de la cita. Implementa `View.OnClickListener` y `OnApplyWindowInsetsListener` (sin lambdas) y define sus constantes `EXTRA_*` en `companion object`.
+- **Responsabilidad**: Resumen pre-reserva de la cita. Implementa `View.OnClickListener`, conserva la estructura por defecto de `onCreate` y define sus constantes `EXTRA_*` en `companion object`.
 - **Funcionalidad**: Valida la sesión activa del usuario vía `SessionManager`. Muestra el desglose del doctor, especialidad y tipo de atención, fecha/hora formateada (*ej. "Jueves 26 de noviembre de 2026 · 10:30"*) y consultorio. Al presionar **"Confirmar cita"**, invoca la transacción final.
 - **Notificación de solapamiento / horario bloqueado**: Si el backend responde con conflicto (`HTTP 409`, `accion = "elegir_otro_horario"`, o códigos `MEDICO_OCUPADO`, `PACIENTE_OCUPADO`, `CONSULTORIO_OCUPADO`, `AGENDA_BLOQUEADA`, `HORARIO_NO_DISPONIBLE`, `CONSULTORIO_NO_DISPONIBLE`, `AGENDA_ACTUALIZADA`), muestra el banner `conflict_message` con la primera oración resaltada en negritas y reemplaza las acciones por el botón principal **"Elegir otro horario"** para regresar y refrescar disponibilidad.
 
 #### 3. [`CitaConfirmadaActivity.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/Vista/CitaConfirmadaActivity.kt)
-- **Responsabilidad**: Pantalla de éxito post-reserva. Implementa `View.OnClickListener` y `OnApplyWindowInsetsListener` (sin lambdas) y recibe sus datos mediante constantes `EXTRA_*` en `companion object`.
+- **Responsabilidad**: Pantalla de éxito post-reserva. Implementa `View.OnClickListener`, conserva la estructura por defecto de `onCreate` y recibe sus datos mediante constantes `EXTRA_*` en `companion object`.
 - **Funcionalidad**: Despliega la confirmación con especialidad, médico, fecha/hora, consultorio y número de ticket (`#id_cita`), además de botones de retorno.
 
 #### 4. Componente UI Personalizado: [`WeekSwipeLayout.kt`](file:///C:/Users/PC/OneDrive/Desktop/MedicDate-movil/app/src/main/java/com/example/medicdate/UI/WeekSwipeLayout.kt)

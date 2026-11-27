@@ -176,8 +176,8 @@ sequenceDiagram
 
 ### 3. Reglas Técnicas Clave Implementadas en el Módulo Móvil
 
-1. **Código Libre de Lambdas**:
-   - Todas las actividades, vistas personalizadas, adaptadores, presentadores, modelos y cliente Retrofit implementan interfaces explícitas (`View.OnClickListener`, `OnApplyWindowInsetsListener`, `RadioGroup.OnCheckedChangeListener`, `WeekSwipeLayout.OnDateChangeListener`, `WeekSwipeLayout.OnWeekSwipeListener`, `OnHorarioSeleccionadoListener`, `Callback<T>`, `Interceptor`).
+1. **Código Libre de Lambdas en Eventos y Red**:
+   - Las actividades conservan la estructura por defecto de `onCreate` (`ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets -> ... }`) e implementan interfaces explícitas para sus eventos (`View.OnClickListener`, `RadioGroup.OnCheckedChangeListener`, `WeekSwipeLayout.OnDateChangeListener`, `WeekSwipeLayout.OnWeekSwipeListener`), mientras que `HorarioAdapter` recibe `activity: RecervarCitaActivity` e implementa `View.OnClickListener` igual que `CursosAdaptador.kt`, y los presentadores usan `Callback<T>`.
 2. **Paso de Datos entre Pantallas Homologado con `cursos` (`RegistroActivity.kt`)**:
    - Cada `Activity` define sus claves en `companion object` (`const val EXTRA_...`) y construye el `Intent` mediante llamadas encadenadas `.putExtra(...)`.
 3. **Filtro Estricto de Días de Atención (`WeekSwipeLayout.kt`)**:
